@@ -1,3 +1,13 @@
+#[desc = "Constraint Satisfaction in Rust"];
+#[license = "MIT"];
+#[crate_id = "csar#0.1"];
+// Segfaults, so we stay as bin for now...
+//#[crate_type = "lib"];
+#[allow(dead_code)]
+fn main() {
+   return;
+}
+
 struct Domain {
    // list of intervals based
    min: int,
@@ -9,7 +19,7 @@ trait Propagator : ToStr {
    fn propagate(&self);
 }
 
-struct FDVar {
+pub struct FDVar {
    name: ~str,
    dom: Domain,
    waitingOnIns: ~[~Propagator]
@@ -48,7 +58,7 @@ impl ToStr for Domain {
 }
 
 impl FDVar {
-   fn new(min: int, max: int, name: ~str) -> FDVar {
+   pub fn new(min: int, max: int, name: ~str) -> FDVar {
       assert!(min <= max);
       FDVar {
          name: name,
@@ -57,11 +67,11 @@ impl FDVar {
       }
    }
 
-   fn min(&self) -> int {
+   pub fn min(&self) -> int {
       self.dom.min
    }
 
-   fn max(&self) -> int {
+   pub fn max(&self) -> int {
       self.dom.max
    }
 }
@@ -74,8 +84,3 @@ impl ToStr for FDVar {
 
 #[cfg(test)]
 mod tests; 
-
-#[allow(dead_code)]
-fn main() {
-   println("Constraint Satisfaction in Rust");
-}
