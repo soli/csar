@@ -41,9 +41,13 @@ fn sets_min_lower() {
 fn sets_min_middle() {
    let mut d = setup_domain_simple();
    let values = ~[-2, 8, 42, 54, 64];
-   for &i in values.iter() {
-      d.set_min(i);
-      assert!(d.min == i);
+   let lengths = ~[3, 2, 2, 1, 1];
+   let mut v : int;
+   for i in range(0, values.len()) {
+      v = values[i];
+      d.set_min(v);
+      assert!(d.min == v);
+      assert!(d.intervals.len() == lengths[i])
    }
    teardown(&d);
 }
@@ -77,9 +81,12 @@ fn sets_max_higher() {
 fn sets_max_middle() {
    let mut d = setup_domain_simple();
    let values = ~[63, 54, 42, 8, -3];
-   for &i in values.iter() {
-      d.set_max(i);
+   let lengths = ~[3, 3, 2, 2, 1];
+   for i in range(0, values.len()) {
+      v = values[i];
+      d.set_max(v);
       assert!(d.max == i);
+      assert!(d.intervals.len() == lengths[i])
    }
    teardown(&d);
 }
@@ -102,8 +109,11 @@ fn sets_max_too_low() {
 }
 
 fn setup_domain_holy() -> Domain {
-   Domain { min: -3, max: 64, intervals: ~[(-3, 2), (4, 18), (20, 24),
-      (30, 30), (32, 34), (36, 38), (40, 42), (54, 64)] }
+   Domain {
+      min: -3,
+      max: 64,
+      intervals: ~[(-3, 2), (4, 18), (20, 24), (30, 30),
+         (32, 34), (36, 38), (40, 42), (54, 64)] }
 }
 
 #[test]
@@ -121,4 +131,21 @@ fn remove_outside() {
    for i in range(0, d.intervals.len()) {
       assert!(d.intervals[i] == e.intervals[i]);
    }
+   teardown(&d);
+}
+
+#[test]
+fn remove_inside() {
+   let mut d = setup_domain_holy();
+   let values = ~[-3, -1, 30, 36, 64];
+   for &v in values.iter() {
+      d.remove(v)
+   }
+   for &v in values.iter() {
+      for &(x, y) in d.intervals.iter() {
+         assert!(v < x || v > y, format!("{} is not outside [{}..{}]", v, x, y));
+      }
+   }
+   assert!(d.intervals.len() == 8);
+   teardown(&d);
 }

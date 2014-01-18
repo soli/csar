@@ -95,7 +95,7 @@ impl Domain {
                break;
             },
             (x, y) if val == y => {
-               self.intervals[test] = (x, y + 1);
+               self.intervals[test] = (x, y - 1);
                break;
             },
             (x, y) => {
@@ -103,6 +103,15 @@ impl Domain {
                self.intervals.insert(test + 1, (val + 1, y));
                break;
             }
+         }
+      }
+      if test == 0 {
+         match self.intervals[test] {
+            (x, _) => self.min = x
+         }
+      } else if test == self.intervals.len() - 1 {
+         match self.intervals[test] {
+            (_, y) => self.max = y
          }
       }
    }
