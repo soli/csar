@@ -1,5 +1,7 @@
 use super::FDVar;
 use super::Domain;
+use super::LtXYx;
+use std::cell::RefCell;
 
 #[test]
 fn creates_new_var() {
@@ -82,10 +84,11 @@ fn sets_max_middle() {
    let mut d = setup_domain_simple();
    let values = ~[63, 54, 42, 8, -3];
    let lengths = ~[3, 3, 2, 2, 1];
+   let mut v : int;
    for i in range(0, values.len()) {
       v = values[i];
       d.set_max(v);
-      assert!(d.max == i);
+      assert!(d.max == v);
       assert!(d.intervals.len() == lengths[i])
    }
    teardown(&d);
@@ -148,4 +151,15 @@ fn remove_inside() {
    }
    assert!(d.intervals.len() == 8);
    teardown(&d);
+}
+
+#[test]
+fn it_does_propagate() {
+   let mut x = FDVar::new(-2, 255, ~"x");
+   let mut y = FDVar::new(-2, 255, ~"y");
+   let xx = @RefCell::new(x);
+   let yy = @RefCell::new(y);
+   let p = LtXYx::new(xx, yy);
+   let mut foo = xx.borrow_mut();
+   assert!(foo.get().max() == 254);
 }

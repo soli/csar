@@ -3,6 +3,10 @@
 #[crate_id = "csar#0.1"];
 // Segfaults as lib (???), so we stay as bin for now...
 //#[crate_type = "lib"];
+#[feature(managed_boxes)];
+
+use std::cell::RefCell;
+
 #[allow(dead_code)]
 fn main() {
    return;
@@ -16,14 +20,24 @@ struct Domain {
    intervals: ~[(int, int)]
 }
 
-trait Propagator : ToStr {
-   fn propagate(&self);
+pub trait Propagator : ToStr {
+   fn propagate(&mut self) -> ~[Event];
+   fn register(&self);
+   fn unregister(&self);
 }
 
 pub struct FDVar {
    name: ~str,
    dom: Domain,
+   waitingOnMin: ~[~Propagator],
+   waitingOnMax: ~[~Propagator],
    waitingOnIns: ~[~Propagator]
+}
+
+pub enum Event {
+   Min,
+   Max,
+   Ins
 }
 
 impl Domain {
@@ -133,6 +147,8 @@ impl FDVar {
       FDVar {
          name: name,
          dom: Domain::new(min, max),
+         waitingOnMin: ~[],
+         waitingOnMax: ~[],
          waitingOnIns: ~[]
       }
    }
@@ -144,11 +160,104 @@ impl FDVar {
    pub fn max(&self) -> int {
       self.dom.max
    }
+
+   fn set_min(&mut self, v: int) -> ~[Event] {
+      if v > self.min() {
+         self.dom.set_min(v);
+         if self.is_instanciated() {
+            ~[Min, Ins]
+         } else {
+            ~[Min]
+         }
+      } else {
+         ~[]
+      }
+   }
+
+   fn set_max(&mut self, v: int) -> ~[Event] {
+      if v < self.max() {
+         self.dom.set_max(v);
+         if self.is_instanciated() {
+            ~[Max, Ins]
+         } else {
+            ~[Max]
+         }
+      } else {
+         ~[]
+      }
+   }
+
+   fn is_instanciated(&self) -> bool {
+      self.min() == self.max()
+   }
+
+   fn add_waiting_min(&self, p: &Propagator) {}
+
+   fn add_waiting_max(&self, p: &Propagator) {}
+
+   fn add_waiting_ins(&self, p: &Propagator) {}
+
+   fn del_waiting_min(&self, p: &Propagator) {}
+
+   fn del_waiting_max(&self, p: &Propagator) {}
+
+   fn del_waiting_ins(&self, p: &Propagator) {}
 }
 
 impl ToStr for FDVar {
    fn to_str(&self) -> ~str {
       self.name + " (" + self.dom.to_str() + ")"
+   }
+}
+
+pub struct LtXYx {
+   x: @RefCell<FDVar>,
+   y: @RefCell<FDVar>
+}
+
+impl LtXYx {
+   pub fn new(x: @RefCell<FDVar>, y: @RefCell<FDVar>) -> LtXYx {
+      let mut this = LtXYx { x: x, y: y };
+      this.register();
+      this.propagate();
+      this
+   }
+}
+
+impl Propagator for LtXYx {
+   fn register(&self) {
+      let mut y = self.y.borrow_mut();
+      y.get().add_waiting_max(self);
+   }
+
+   fn unregister(&self) {
+      let mut y = self.y.borrow_mut();
+      y.get().del_waiting_max(self);
+   }
+
+   fn propagate(&mut self) -> ~[Event] {
+      let mut xx = self.x.borrow_mut();
+      let mut x = xx.get();
+      let mut yy = self.y.borrow_mut();
+      let mut y = yy.get();
+      if x.max() < y.min() {
+         // entailed
+         self.unregister();
+         ~[]
+      } else if x.max() > y.max() - 1 {
+         //if y.is_instanciated() {
+         //   self.unregister();
+         //}
+         x.set_max(y.max() - 1)
+      } else {
+         ~[]
+      }
+   }
+}
+impl ToStr for LtXYx {
+   fn to_str(&self) -> ~str {
+      ~"x < y"
+     // format!("{} < {}", self.x.to_str(), self.y.to_str())
    }
 }
 
