@@ -155,8 +155,8 @@ fn remove_inside() {
 
 #[test]
 fn it_does_propagate() {
-   let mut x = FDVar::new(-2, 255, ~"x");
-   let mut y = FDVar::new(-2, 255, ~"y");
+   let x = FDVar::new(-2, 255, ~"x");
+   let y = FDVar::new(-2, 255, ~"y");
    let xx = @RefCell::new(x);
    let yy = @RefCell::new(y);
    let p = LtXYx::new(xx, yy);

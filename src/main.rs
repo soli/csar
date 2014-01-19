@@ -237,9 +237,9 @@ impl Propagator for LtXYx {
 
    fn propagate(&mut self) -> ~[Event] {
       let mut xx = self.x.borrow_mut();
-      let mut x = xx.get();
+      let x = xx.get();
       let mut yy = self.y.borrow_mut();
-      let mut y = yy.get();
+      let y = yy.get();
       if x.max() < y.min() {
          // entailed
          self.unregister();
