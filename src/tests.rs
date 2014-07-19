@@ -1,7 +1,7 @@
 use super::FDVar;
 use super::Domain;
 use super::LtXYx;
-use std::cell::RefCell;
+// use std::cell::RefCell;
 
 #[test]
 fn creates_new_var() {
@@ -157,9 +157,6 @@ fn remove_inside() {
 fn it_does_propagate() {
    let x = FDVar::new(-2, 255, "x");
    let y = FDVar::new(-2, 255, "y");
-   let xx = @RefCell::new(x);
-   let yy = @RefCell::new(y);
-   let p = LtXYx::new(xx, yy);
-   let mut foo = xx.borrow_mut();
-   assert!(foo.get().max() == 254);
+   let p = LtXYx::new(x, y);
+   assert!(x.max() == 254);
 }
