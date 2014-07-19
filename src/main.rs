@@ -1,9 +1,9 @@
-#[desc = "Constraint Satisfaction in Rust"];
-#[license = "MIT"];
-#[crate_id = "csar#0.1"];
+#![desc = "Constraint Satisfaction in Rust"]
+#![license = "MIT"]
+#![crate_id = "csar#0.1"]
 // Segfaults as lib (???), so we stay as bin for now...
 //#[crate_type = "lib"];
-#[feature(managed_boxes)];
+#![feature(managed_boxes)]
 
 use std::cell::RefCell;
 
@@ -17,21 +17,21 @@ fn main() {
 struct Domain {
    min: int,
    max: int,
-   intervals: ~[(int, int)]
+   intervals: Vec<int>
 }
 
 pub trait Propagator : ToStr {
-   fn propagate(&mut self) -> ~[Event];
+   fn propagate(&mut self) -> Vec<Event>;
    fn register(&self);
    fn unregister(&self);
 }
 
 pub struct FDVar {
-   name: ~str,
+   name: String,
    dom: Domain,
-   waitingOnMin: ~[~Propagator],
-   waitingOnMax: ~[~Propagator],
-   waitingOnIns: ~[~Propagator]
+   waitingOnMin: Vec<Propagator>,
+   waitingOnMax: Vec<Propagator>,
+   waitingOnIns: Vec<Propagator>
 }
 
 pub enum Event {
@@ -46,7 +46,7 @@ impl Domain {
       Domain {
          min: min,
          max: max,
-         intervals: ~[(min, max)]
+         intervals: vec![(min, max)]
       }
    }
 
@@ -132,7 +132,7 @@ impl Domain {
 }
 
 impl ToStr for Domain {
-   fn to_str(&self) -> ~str {
+   fn to_str(&self) -> String {
       let mut s = "(" + self.min.to_str() + ", " + self.max.to_str() + ") [";
       for &(min, max) in self.intervals.iter() {
          s = s + min.to_str() + ".." + max.to_str() + ", ";
@@ -142,14 +142,14 @@ impl ToStr for Domain {
 }
 
 impl FDVar {
-   pub fn new(min: int, max: int, name: ~str) -> FDVar {
+   pub fn new(min: int, max: int, name: String) -> FDVar {
       assert!(min <= max);
       FDVar {
          name: name,
          dom: Domain::new(min, max),
-         waitingOnMin: ~[],
-         waitingOnMax: ~[],
-         waitingOnIns: ~[]
+         waitingOnMin: vec![],
+         waitingOnMax: vec![],
+         waitingOnIns: vec![]
       }
    }
 
@@ -161,29 +161,29 @@ impl FDVar {
       self.dom.max
    }
 
-   fn set_min(&mut self, v: int) -> ~[Event] {
+   fn set_min(&mut self, v: int) -> Vec<Event> {
       if v > self.min() {
          self.dom.set_min(v);
          if self.is_instanciated() {
-            ~[Min, Ins]
+            [Min, Ins]
          } else {
-            ~[Min]
+            [Min]
          }
       } else {
-         ~[]
+         []
       }
    }
 
-   fn set_max(&mut self, v: int) -> ~[Event] {
+   fn set_max(&mut self, v: int) -> Vec<Event> {
       if v < self.max() {
          self.dom.set_max(v);
          if self.is_instanciated() {
-            ~[Max, Ins]
+            [Max, Ins]
          } else {
-            ~[Max]
+            [Max]
          }
       } else {
-         ~[]
+         []
       }
    }
 
@@ -205,7 +205,7 @@ impl FDVar {
 }
 
 impl ToStr for FDVar {
-   fn to_str(&self) -> ~str {
+   fn to_str(&self) -> String {
       self.name + " (" + self.dom.to_str() + ")"
    }
 }
@@ -235,7 +235,7 @@ impl Propagator for LtXYx {
       y.get().del_waiting_max(self);
    }
 
-   fn propagate(&mut self) -> ~[Event] {
+   fn propagate(&mut self) -> Vec<Event> {
       let mut xx = self.x.borrow_mut();
       let x = xx.get();
       let mut yy = self.y.borrow_mut();
@@ -243,23 +243,23 @@ impl Propagator for LtXYx {
       if x.max() < y.min() {
          // entailed
          self.unregister();
-         ~[]
+         []
       } else if x.max() > y.max() - 1 {
          //if y.is_instanciated() {
          //   self.unregister();
          //}
          x.set_max(y.max() - 1)
       } else {
-         ~[]
+         []
       }
    }
 }
 impl ToStr for LtXYx {
-   fn to_str(&self) -> ~str {
-      ~"x < y"
+   fn to_str(&self) -> String {
+      "x < y"
      // format!("{} < {}", self.x.to_str(), self.y.to_str())
    }
 }
 
 #[cfg(test)]
-mod tests; 
+mod tests;

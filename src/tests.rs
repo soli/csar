@@ -5,7 +5,7 @@ use std::cell::RefCell;
 
 #[test]
 fn creates_new_var() {
-   let x = FDVar::new(-2, 255, ~"x");
+   let x = FDVar::new(-2, 255, "x");
    assert!(x.min() == -2);
    assert!(x.max() == 255);
 }
@@ -23,7 +23,7 @@ fn max_is_max(d: &Domain) -> bool {
 }
 
 fn setup_domain_simple() -> Domain {
-   Domain { min: -3, max: 64, intervals: ~[(-3, 2), (4, 42), (54, 64)] }
+   Domain { min: -3, max: 64, intervals: [(-3, 2), (4, 42), (54, 64)] }
 }
 
 fn teardown(d: &Domain) {
@@ -42,8 +42,8 @@ fn sets_min_lower() {
 #[test]
 fn sets_min_middle() {
    let mut d = setup_domain_simple();
-   let values = ~[-2, 8, 42, 54, 64];
-   let lengths = ~[3, 2, 2, 1, 1];
+   let values = [-2, 8, 42, 54, 64];
+   let lengths = [3, 2, 2, 1, 1];
    let mut v : int;
    for i in range(0, values.len()) {
       v = values[i];
@@ -82,8 +82,8 @@ fn sets_max_higher() {
 #[test]
 fn sets_max_middle() {
    let mut d = setup_domain_simple();
-   let values = ~[63, 54, 42, 8, -3];
-   let lengths = ~[3, 3, 2, 2, 1];
+   let values = [63, 54, 42, 8, -3];
+   let lengths = [3, 3, 2, 2, 1];
    let mut v : int;
    for i in range(0, values.len()) {
       v = values[i];
@@ -115,7 +115,7 @@ fn setup_domain_holy() -> Domain {
    Domain {
       min: -3,
       max: 64,
-      intervals: ~[(-3, 2), (4, 18), (20, 24), (30, 30),
+      intervals: [(-3, 2), (4, 18), (20, 24), (30, 30),
          (32, 34), (36, 38), (40, 42), (54, 64)] }
 }
 
@@ -140,7 +140,7 @@ fn remove_outside() {
 #[test]
 fn remove_inside() {
    let mut d = setup_domain_holy();
-   let values = ~[-3, -1, 30, 36, 64];
+   let values = [-3, -1, 30, 36, 64];
    for &v in values.iter() {
       d.remove(v)
    }
@@ -155,8 +155,8 @@ fn remove_inside() {
 
 #[test]
 fn it_does_propagate() {
-   let x = FDVar::new(-2, 255, ~"x");
-   let y = FDVar::new(-2, 255, ~"y");
+   let x = FDVar::new(-2, 255, "x");
+   let y = FDVar::new(-2, 255, "y");
    let xx = @RefCell::new(x);
    let yy = @RefCell::new(y);
    let p = LtXYx::new(xx, yy);
