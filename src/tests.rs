@@ -26,7 +26,11 @@ fn max_is_max(d: &Domain) -> bool {
 
 fn setup_domain_simple() -> Domain {
     Domain {
-        dom: RefCell::new(Dom { min: -3, max: 64, intervals: vec![(-3, 2), (4, 42), (54, 64)] })
+        dom: RefCell::new(Dom {
+                 min: -3,
+                 max: 64,
+                 intervals: vec![(-3, 2), (4, 42), (54, 64)]
+             })
     }
 }
 

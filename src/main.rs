@@ -1,17 +1,11 @@
 #![desc = "Constraint Satisfaction in Rust"]
 #![license = "MIT"]
-#![crate_id = "csar#0.1"]
-// Segfaults as lib (???), so we stay as bin for now...
-//#[crate_type = "lib"];
+#![crate_id = "csar#0.2"]
+#![crate_type = "lib"]
 
 use std::fmt;
-// #![feature(managed_boxes)]
 use std::cell::RefCell;
-
-#[allow(dead_code)]
-fn main() {
-    return;
-}
+use std::io;
 
 /// Representation of finite domains as a list of intervals, maintaining
 /// min and max for easy/quick access
@@ -21,6 +15,7 @@ struct Dom {
     intervals: Vec<(int, int)>
 }
 
+/// Runtime checked mutability with borrowing
 struct Domain {
     dom: RefCell<Dom>
 }
@@ -248,7 +243,7 @@ impl<'r> LtXYx<'r> {
     pub fn new(x: &'r FDVar, y: &'r FDVar) -> LtXYx<'r> {
         let mut this = LtXYx { x: x, y: y };
         this.register();
-        this.propagate();
+        io::stderr().write_line(this.propagate().to_str().as_slice()).unwrap();
         this
     }
 }
