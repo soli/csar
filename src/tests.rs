@@ -9,7 +9,7 @@ use std::rc::Rc;
 
 #[test]
 fn creates_new_var() {
-    let m = Rc::new(Model::new());
+    let m = Model::new();
     let x = Rc::new(FDVar::new(m.downgrade(), -2, 255, "x"));
     m.add_var(x.clone());
     assert!(x.min() == -2);
@@ -177,7 +177,7 @@ fn remove_inside() {
 
 #[test]
 fn it_does_propagate() {
-    let m = Rc::new(Model::new());
+    let m = Model::new();
     let x = Rc::new(FDVar::new(m.downgrade(), -2, 255, "x"));
     m.add_var(x.clone());
     let y = Rc::new(FDVar::new(m.downgrade(), -2, 255, "y"));

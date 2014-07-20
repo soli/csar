@@ -9,7 +9,7 @@ use std::collections::hashmap::HashMap;
 use std::rc::{Rc,Weak};
 
 #[allow(dead_code)]
-pub struct Model {
+struct Mod {
     vars: RefCell<Vec<Rc<FDVar>>>,
     vars_count: Cell<uint>,
     propagators: RefCell<Vec<Box<Propagator>>>,
@@ -18,6 +18,8 @@ pub struct Model {
     waitingOnMax: RefCell<HashMap<uint, Vec<uint>>>,
     waitingOnIns: RefCell<HashMap<uint, Vec<uint>>>
 }
+
+pub struct Model;
 
 /// Representation of finite domains as a list of intervals, maintaining
 /// min and max for easy/quick access
@@ -44,7 +46,7 @@ pub trait Propagator : ToStr {
 #[allow(dead_code)]
 #[deriving(Clone)]
 pub struct FDVar {
-    model: Weak<Model>,
+    model: Weak<Mod>,
     id: uint,
     name: String,
     dom: Domain
@@ -58,9 +60,9 @@ pub enum Event {
 }
 
 #[allow(dead_code)]
-impl<'r> Model {
-    fn new() -> Model {
-        Model {
+impl Model {
+    fn new() -> Rc<Mod> {
+        Rc::new(Mod {
             vars_count: Cell::new(0),
             vars: RefCell::new(Vec::new()),
             prop_count: Cell::new(0),
@@ -68,9 +70,12 @@ impl<'r> Model {
             waitingOnMin: RefCell::new(HashMap::new()),
             waitingOnMax: RefCell::new(HashMap::new()),
             waitingOnIns: RefCell::new(HashMap::new())
-        }
+        })
     }
+}
 
+#[allow(dead_code)]
+impl Mod {
     fn add_var(&self, var: Rc<FDVar>) {
         self.vars.borrow_mut().push(var);
         self.vars_count.set(self.vars_count.get() + 1);
@@ -254,9 +259,9 @@ impl fmt::Show for Domain {
 }
 
 #[allow(dead_code)]
-#[allow(unused_variable)]
+#[allow(visible_private_types)]
 impl FDVar {
-    pub fn new(model: Weak<Model>, min: int, max: int, name: &str) -> FDVar {
+    pub fn new(model: Weak<Mod>, min: int, max: int, name: &str) -> FDVar {
         assert!(min <= max);
         let id = model.upgrade().unwrap().vars_count.get();
         FDVar {
@@ -315,14 +320,15 @@ impl fmt::Show for FDVar {
 }
 
 pub struct LtXYx {
-    model: Weak<Model>,
+    model: Weak<Mod>,
     id: uint,
     x: uint,
     y: uint
 }
 
+#[allow(visible_private_types)]
 impl LtXYx {
-    pub fn new(model: Weak<Model>, x: uint, y: uint) -> LtXYx {
+    pub fn new(model: Weak<Mod>, x: uint, y: uint) -> LtXYx {
         let id = model.upgrade().unwrap().prop_count.get();
         let mut this = LtXYx { model: model, id: id, x: x, y: y };
         this.register();
