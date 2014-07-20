@@ -6,7 +6,7 @@
 
 use std::fmt;
 // #![feature(managed_boxes)]
-// use std::cell::RefCell;
+use std::cell::RefCell;
 
 #[allow(dead_code)]
 fn main() {
@@ -15,10 +15,14 @@ fn main() {
 
 /// Representation of finite domains as a list of intervals, maintaining
 /// min and max for easy/quick access
-struct Domain {
+struct Dom {
     min: int,
     max: int,
     intervals: Vec<(int, int)>
+}
+
+struct Domain {
+    dom: RefCell<Dom>
 }
 
 pub trait Propagator : ToStr {
@@ -27,6 +31,7 @@ pub trait Propagator : ToStr {
     fn unregister(&self);
 }
 
+#[allow(dead_code)]
 pub struct FDVar {
     name: String,
     dom: Domain,
@@ -42,53 +47,71 @@ pub enum Event {
     Ins
 }
 
+#[allow(dead_code)]
 impl Domain {
     /// Domain created with initial bounds
     fn new(min: int, max: int) -> Domain {
         Domain {
-            min: min,
-            max: max,
-            intervals: vec![(min, max)]
+            dom: RefCell::new(Dom {
+                     min: min,
+                     max: max,
+                     intervals: vec![(min, max)]
+                 })
         }
     }
 
-    fn set_min(&mut self, min: int) {
-        if min < self.min { return; }
-        if min > self.max { return; } // TODO failure via conditions
+    fn set_min(&self, min: int) {
+        let mut dom = self.dom.borrow_mut();
+        if min < dom.min { return; }
+        if min > dom.max { return; } // TODO failure via conditions
         loop {
-            match self.intervals.get(0) {
+            match dom.intervals.get(0) {
                 // note that the breaks are for the loop, not the matching
-                &(x, _) if min < x => { self.min = x; break; },
-                &(_, y) if min > y => { self.intervals.shift(); },
-                &(_, y) => { self.min = min; *self.intervals.get_mut(0) = (min, y); break }
+                &(x, _) if min < x => { dom.min = x; break; },
+                &(_, y) if min > y => { dom.intervals.shift(); },
+                &(_, y) => {
+                    dom.min = min;
+                    *dom.intervals.get_mut(0) = (min, y);
+                    break;
+                }
             }
         }
     }
 
-    fn set_max(&mut self, max: int) {
-        if max > self.max { return; }
-        if max < self.min { return; } // TODO failure via conditions
+    fn get_min(&self) -> int {
+        self.dom.borrow().min
+    }
+
+    fn set_max(&self, max: int) {
+        let mut dom = self.dom.borrow_mut();
+        if max > dom.max { return; }
+        if max < dom.min { return; } // TODO failure via conditions
         loop {
-            match self.intervals.get(self.intervals.len() - 1) {
-                &(_, y) if max > y => { self.max = y; break; },
-                &(x, _) if max < x => { self.intervals.pop(); },
+            match dom.intervals.last().unwrap() {
+                &(_, y) if max > y => { dom.max = y; break; },
+                &(x, _) if max < x => { dom.intervals.pop(); },
                 &(x, _) => {
-                    self.max = max;
-                    *self.intervals.mut_last().unwrap() = (x, max);
+                    dom.max = max;
+                    *dom.intervals.mut_last().unwrap() = (x, max);
                     break
                 }
             }
         }
     }
 
-    fn remove(&mut self, val: int) {
-        if val > self.max || val < self.min { return; }
+    fn get_max(&self) -> int {
+        self.dom.borrow().max
+    }
+
+    fn remove(&self, val: int) {
+        let mut dom = self.dom.borrow_mut();
+        if val > dom.max || val < dom.min { return; }
         let mut down = 0;
-        let mut up = self.intervals.len();
+        let mut up = dom.intervals.len();
         let mut test;
         loop {
             test = down + (up - down) / 2;
-            match self.intervals.get(test) {
+            match dom.intervals.get(test) {
                 &(x, _) if val < x => {
                     if test > down {
                         up = test;
@@ -104,31 +127,31 @@ impl Domain {
                     }
                 },
                 &(x, y) if val == x && val == y => {
-                    self.intervals.remove(test);
+                    dom.intervals.remove(test);
                     break;
                 },
                 &(x, y) if val == x => {
-                    *self.intervals.get_mut(test) = (x + 1, y);
+                    *dom.intervals.get_mut(test) = (x + 1, y);
                     break;
                 },
                 &(x, y) if val == y => {
-                    *self.intervals.get_mut(test) = (x, y - 1);
+                    *dom.intervals.get_mut(test) = (x, y - 1);
                     break;
                 },
                 &(x, y) => {
-                    *self.intervals.get_mut(test) = (x, val - 1);
-                    self.intervals.insert(test + 1, (val + 1, y));
+                    *dom.intervals.get_mut(test) = (x, val - 1);
+                    dom.intervals.insert(test + 1, (val + 1, y));
                     break;
                 }
             }
         }
         if test == 0 {
-            match self.intervals.get(test) {
-                &(x, _) => self.min = x
+            match dom.intervals.get(test) {
+                &(x, _) => dom.min = x
             }
-        } else if test == self.intervals.len() - 1 {
-            match self.intervals.get(test) {
-                &(_, y) => self.max = y
+        } else if test == dom.intervals.len() - 1 {
+            match dom.intervals.get(test) {
+                &(_, y) => dom.max = y
             }
         }
     }
@@ -136,19 +159,22 @@ impl Domain {
 
 impl fmt::Show for Domain {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let mut s = format!("({}, {}) [", self.min, self.max);
-        for &(min, max) in self.intervals.iter() {
+        let dom = self.dom.borrow();
+        let mut s = format!("({}, {}) [", dom.min, dom.max);
+        for &(min, max) in dom.intervals.iter() {
             s = s + min.to_str() + ".." + max.to_str() + ", ";
         }
         return write!(f, "{}]", s);
     }
 }
 
+#[allow(dead_code)]
+#[allow(unused_variable)]
 impl FDVar {
-    pub fn new(min: int, max: int, name: String) -> FDVar {
+    pub fn new(min: int, max: int, name: &str) -> FDVar {
         assert!(min <= max);
         FDVar {
-            name: name,
+            name: name.to_string(),
             dom: Domain::new(min, max),
             waitingOnMin: vec![],
             waitingOnMax: vec![],
@@ -157,11 +183,11 @@ impl FDVar {
     }
 
     pub fn min(&self) -> int {
-        self.dom.min
+        self.dom.get_min()
     }
 
     pub fn max(&self) -> int {
-        self.dom.max
+        self.dom.get_max()
     }
 
     fn set_min(&mut self, v: int) -> Vec<Event> {
@@ -177,7 +203,7 @@ impl FDVar {
         }
     }
 
-    fn set_max(&mut self, v: int) -> Vec<Event> {
+    fn set_max(&self, v: int) -> Vec<Event> {
         if v < self.max() {
             self.dom.set_max(v);
             if self.is_instanciated() {
@@ -213,13 +239,13 @@ impl fmt::Show for FDVar {
     }
 }
 
-pub struct LtXYx {
-    x: FDVar,
-    y: FDVar
+pub struct LtXYx<'r> {
+    x: &'r FDVar,
+    y: &'r FDVar
 }
 
-impl LtXYx {
-    pub fn new(x: FDVar, y: FDVar) -> LtXYx {
+impl<'r> LtXYx<'r> {
+    pub fn new(x: &'r FDVar, y: &'r FDVar) -> LtXYx<'r> {
         let mut this = LtXYx { x: x, y: y };
         this.register();
         this.propagate();
@@ -227,37 +253,31 @@ impl LtXYx {
     }
 }
 
-impl Propagator for LtXYx {
+impl<'r> Propagator for LtXYx<'r> {
     fn register(&self) {
-        let mut y = self.y.borrow_mut();
-        y.get().add_waiting_max(self);
+        self.y.add_waiting_max(self);
     }
 
     fn unregister(&self) {
-        let mut y = self.y.borrow_mut();
-        y.get().del_waiting_max(self);
+        self.y.del_waiting_max(self);
     }
 
     fn propagate(&mut self) -> Vec<Event> {
-        let mut xx = self.x.borrow_mut();
-        let x = xx.get();
-        let mut yy = self.y.borrow_mut();
-        let y = yy.get();
-        if x.max() < y.min() {
+        if self.x.max() < self.y.min() {
             // entailed
             self.unregister();
-            []
-        } else if x.max() > y.max() - 1 {
+            vec![]
+        } else if self.x.max() > self.y.max() - 1 {
             //if y.is_instanciated() {
             //   self.unregister();
             //}
-            x.set_max(y.max() - 1)
+            self.x.set_max(self.y.max() - 1)
         } else {
-            []
+            vec![]
         }
     }
 }
-impl fmt::Show for LtXYx {
+impl<'r> fmt::Show for LtXYx<'r> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "{} < {}", self.x.to_str(), self.y.to_str())
     }
