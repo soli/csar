@@ -4,11 +4,24 @@
 #![crate_type = "lib"]
 
 use std::fmt;
-use std::cell::RefCell;
-use std::io;
+use std::cell::{Cell,RefCell};
+use std::collections::hashmap::HashMap;
+use std::rc::{Rc,Weak};
+
+#[allow(dead_code)]
+pub struct Model {
+    vars: RefCell<Vec<Rc<FDVar>>>,
+    vars_count: Cell<uint>,
+    propagators: RefCell<Vec<Box<Propagator>>>,
+    prop_count: Cell<uint>,
+    waitingOnMin: RefCell<HashMap<uint, Vec<uint>>>,
+    waitingOnMax: RefCell<HashMap<uint, Vec<uint>>>,
+    waitingOnIns: RefCell<HashMap<uint, Vec<uint>>>
+}
 
 /// Representation of finite domains as a list of intervals, maintaining
 /// min and max for easy/quick access
+#[deriving(Clone)]
 struct Dom {
     min: int,
     max: int,
@@ -16,23 +29,25 @@ struct Dom {
 }
 
 /// Runtime checked mutability with borrowing
+#[deriving(Clone)]
 struct Domain {
     dom: RefCell<Dom>
 }
 
 pub trait Propagator : ToStr {
-    fn propagate(&mut self) -> Vec<Event>;
-    fn register(&self);
-    fn unregister(&self);
+    fn id(&mut self) -> uint;
+    fn propagate(&mut self) -> Vec<uint>;
+    fn register(&mut self);
+    fn unregister(&mut self);
 }
 
 #[allow(dead_code)]
+#[deriving(Clone)]
 pub struct FDVar {
+    model: Weak<Model>,
+    id: uint,
     name: String,
-    dom: Domain,
-    waitingOnMin: Vec<Box<Propagator>>,
-    waitingOnMax: Vec<Box<Propagator>>,
-    waitingOnIns: Vec<Box<Propagator>>
+    dom: Domain
 }
 
 #[deriving(Show)]
@@ -40,6 +55,81 @@ pub enum Event {
     Min,
     Max,
     Ins
+}
+
+#[allow(dead_code)]
+impl<'r> Model {
+    fn new() -> Model {
+        Model {
+            vars_count: Cell::new(0),
+            vars: RefCell::new(Vec::new()),
+            prop_count: Cell::new(0),
+            propagators: RefCell::new(Vec::new()),
+            waitingOnMin: RefCell::new(HashMap::new()),
+            waitingOnMax: RefCell::new(HashMap::new()),
+            waitingOnIns: RefCell::new(HashMap::new())
+        }
+    }
+
+    fn add_var(&self, var: Rc<FDVar>) {
+        self.vars.borrow_mut().push(var);
+        self.vars_count.set(self.vars_count.get() + 1);
+    }
+
+    fn add_waiting_max(&self, var: uint, propagator: uint) {
+        let mut waiting = self.waitingOnMax.borrow_mut();
+        if waiting.contains_key(&var) {
+            waiting.get_mut(&var).push(propagator);
+        } else {
+            waiting.insert(var, vec![propagator]);
+        }
+    }
+
+    fn add_waiting_min(&self, var: uint, propagator: uint) {
+        let mut waiting = self.waitingOnMin.borrow_mut();
+        if waiting.contains_key(&var) {
+            waiting.get_mut(&var).push(propagator);
+        } else {
+            waiting.insert(var, vec![propagator]);
+        }
+    }
+
+    fn add_waiting_ins(&self, var: uint, propagator: uint) {
+        let mut waiting = self.waitingOnIns.borrow_mut();
+        if waiting.contains_key(&var) {
+            waiting.get_mut(&var).push(propagator);
+        } else {
+            waiting.insert(var, vec![propagator]);
+        }
+    }
+
+    fn del_waiting_max(&self, var: uint, propagator: uint) {
+        self.waitingOnMax.borrow_mut().get_mut(&var).remove(propagator);
+    }
+
+    fn get_waiting_on_min(&self, var: uint) -> Vec<uint> {
+        let waiting = self.waitingOnMin.borrow();
+        match waiting.find_copy(&var) {
+            Some(vec) => vec,
+            None => Vec::new()
+        }
+    }
+
+    fn get_waiting_on_max(&self, var: uint) -> Vec<uint> {
+        let waiting = self.waitingOnMax.borrow();
+        match waiting.find_copy(&var) {
+            Some(vec) => vec,
+            None => Vec::new()
+        }
+    }
+
+    fn get_waiting_on_ins(&self, var: uint) -> Vec<uint> {
+        let waiting = self.waitingOnIns.borrow();
+        match waiting.find_copy(&var) {
+            Some(vec) => vec,
+            None => Vec::new()
+        }
+    }
 }
 
 #[allow(dead_code)]
@@ -166,14 +256,14 @@ impl fmt::Show for Domain {
 #[allow(dead_code)]
 #[allow(unused_variable)]
 impl FDVar {
-    pub fn new(min: int, max: int, name: &str) -> FDVar {
+    pub fn new(model: Weak<Model>, min: int, max: int, name: &str) -> FDVar {
         assert!(min <= max);
+        let id = model.upgrade().unwrap().vars_count.get();
         FDVar {
+            model: model,
+            id: id,
             name: name.to_string(),
-            dom: Domain::new(min, max),
-            waitingOnMin: vec![],
-            waitingOnMax: vec![],
-            waitingOnIns: vec![]
+            dom: Domain::new(min, max)
         }
     }
 
@@ -185,26 +275,28 @@ impl FDVar {
         self.dom.get_max()
     }
 
-    fn set_min(&mut self, v: int) -> Vec<Event> {
+    fn set_min(&self, v: int) -> Vec<uint> {
         if v > self.min() {
             self.dom.set_min(v);
             if self.is_instanciated() {
-                vec![Min, Ins]
+                self.model.upgrade().unwrap().get_waiting_on_min(self.id)
+                    // + self.waitingOnIns
             } else {
-                vec![Min]
+                self.model.upgrade().unwrap().get_waiting_on_min(self.id)
             }
         } else {
             vec![]
         }
     }
 
-    fn set_max(&self, v: int) -> Vec<Event> {
+    fn set_max(&self, v: int) -> Vec<uint> {
         if v < self.max() {
             self.dom.set_max(v);
             if self.is_instanciated() {
-                vec![Max, Ins]
+                // self.waitingOnMax + self.waitingOnIns
+                self.model.upgrade().unwrap().get_waiting_on_max(self.id)
             } else {
-                vec![Max]
+                self.model.upgrade().unwrap().get_waiting_on_max(self.id)
             }
         } else {
             vec![]
@@ -214,18 +306,6 @@ impl FDVar {
     fn is_instanciated(&self) -> bool {
         self.min() == self.max()
     }
-
-    fn add_waiting_min(&self, p: &Propagator) {}
-
-    fn add_waiting_max(&self, p: &Propagator) {}
-
-    fn add_waiting_ins(&self, p: &Propagator) {}
-
-    fn del_waiting_min(&self, p: &Propagator) {}
-
-    fn del_waiting_max(&self, p: &Propagator) {}
-
-    fn del_waiting_ins(&self, p: &Propagator) {}
 }
 
 impl fmt::Show for FDVar {
@@ -234,45 +314,56 @@ impl fmt::Show for FDVar {
     }
 }
 
-pub struct LtXYx<'r> {
-    x: &'r FDVar,
-    y: &'r FDVar
+pub struct LtXYx {
+    model: Weak<Model>,
+    id: uint,
+    x: uint,
+    y: uint
 }
 
-impl<'r> LtXYx<'r> {
-    pub fn new(x: &'r FDVar, y: &'r FDVar) -> LtXYx<'r> {
-        let mut this = LtXYx { x: x, y: y };
+impl LtXYx {
+    pub fn new(model: Weak<Model>, x: uint, y: uint) -> LtXYx {
+        let id = model.upgrade().unwrap().prop_count.get();
+        let mut this = LtXYx { model: model, id: id, x: x, y: y };
         this.register();
-        io::stderr().write_line(this.propagate().to_str().as_slice()).unwrap();
+        this.propagate();
         this
     }
 }
 
-impl<'r> Propagator for LtXYx<'r> {
-    fn register(&self) {
-        self.y.add_waiting_max(self);
+impl Propagator for LtXYx {
+    fn id(&mut self) -> uint {
+        self.id
     }
 
-    fn unregister(&self) {
-        self.y.del_waiting_max(self);
+    fn register(&mut self) {
+        self.model.upgrade().unwrap().add_waiting_max(self.y, self.id);
     }
 
-    fn propagate(&mut self) -> Vec<Event> {
-        if self.x.max() < self.y.min() {
+    fn unregister(&mut self) {
+        self.model.upgrade().unwrap().del_waiting_max(self.y, self.id);
+    }
+
+    fn propagate(&mut self) -> Vec<uint> {
+        let model = self.model.upgrade().unwrap();
+        let mut vars = model.vars.borrow_mut();
+        if vars.get(self.x).max() < vars.get(self.y).min() {
             // entailed
             self.unregister();
             vec![]
-        } else if self.x.max() > self.y.max() - 1 {
+        } else if vars.get(self.x).max() > vars.get(self.y).max() - 1 {
             //if y.is_instanciated() {
             //   self.unregister();
             //}
-            self.x.set_max(self.y.max() - 1)
+            let max = vars.get(self.y).max() - 1;
+            vars.get(self.x).set_max(max)
         } else {
             vec![]
         }
     }
 }
-impl<'r> fmt::Show for LtXYx<'r> {
+
+impl fmt::Show for LtXYx {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "{} < {}", self.x.to_str(), self.y.to_str())
     }
