@@ -4,16 +4,13 @@
 #![crate_type = "lib"]
 
 use std::fmt;
-use std::cell::{Cell,RefCell};
+use std::cell::RefCell;
 use std::collections::hashmap::HashMap;
 use std::rc::{Rc,Weak};
 
-#[allow(dead_code)]
 pub struct Mod {
     vars: RefCell<Vec<Rc<FDVar>>>,
-    vars_count: Cell<uint>,
     propagators: RefCell<Vec<Rc<Box<Propagator>>>>,
-    prop_count: Cell<uint>,
     waiting: RefCell<HashMap<(uint, Event), Vec<uint>>>
 }
 
@@ -35,11 +32,24 @@ struct Domain {
     dom: RefCell<Dom>
 }
 
-pub trait Propagator : ToStr {
-    fn id(&self) -> uint;
+pub trait Propagator {
     fn propagate(&self) -> Vec<uint>;
-    fn register(&self);
-    fn unregister(&self);
+    fn id(&self) -> uint;
+    fn events(&self) -> Vec<(uint, Event)>;
+    fn model(&self) -> Weak<Mod>;
+
+    fn register(&self) {
+        for &(var, event) in self.events().iter() {
+            self.model().upgrade().unwrap().add_waiting(var, event, self.id());
+        }
+    }
+
+    fn unregister(&self) {
+        for &(var, event) in self.events().iter() {
+            self.model().upgrade().unwrap().del_waiting(var, event, self.id());
+        }
+    }
+
 }
 
 pub struct Var;
@@ -63,25 +73,20 @@ pub enum Event {
 impl Model {
     fn new() -> Rc<Mod> {
         Rc::new(Mod {
-            vars_count: Cell::new(0),
             vars: RefCell::new(Vec::new()),
-            prop_count: Cell::new(0),
             propagators: RefCell::new(Vec::new()),
             waiting: RefCell::new(HashMap::new())
         })
     }
 }
 
-#[allow(dead_code)]
 impl Mod {
     fn add_var(&self, var: Rc<FDVar>) {
         self.vars.borrow_mut().push(var);
-        self.vars_count.set(self.vars_count.get() + 1);
     }
 
     fn add_prop(&self, prop: Rc<Box<Propagator>>) {
         self.propagators.borrow_mut().push(prop);
-        self.prop_count.set(self.prop_count.get() + 1);
     }
 
     fn add_waiting(&self, var: uint, event: Event, propagator: uint) {
@@ -230,7 +235,7 @@ impl fmt::Show for Domain {
 impl Var {
     pub fn new(model: Rc<Mod>, min: int, max: int, name: &str) -> Rc<FDVar> {
         assert!(min <= max);
-        let id = model.vars_count.get();
+        let id = model.vars.borrow().len();
         let v = Rc::new(FDVar {
             model: model.downgrade(),
             id: id,
@@ -300,7 +305,7 @@ pub struct LtXYx {
 
 impl LtXYx {
     pub fn new(model: Rc<Mod>, x: Rc<FDVar>, y: Rc<FDVar>) -> Rc<Box<Propagator>> {
-        let id = model.prop_count.get();
+        let id = model.propagators.borrow().len();
         let this = LtXYx { model: model.downgrade(), id: id, x: x.id, y: y.id };
         this.register();
         this.propagate();
@@ -314,13 +319,12 @@ impl Propagator for LtXYx {
     fn id(&self) -> uint {
         self.id
     }
-
-    fn register(&self) {
-        self.model.upgrade().unwrap().add_waiting(self.y, Max, self.id);
+    fn model(&self) -> Weak<Mod> {
+        self.model.clone()
     }
 
-    fn unregister(&self) {
-        self.model.upgrade().unwrap().del_waiting(self.y, Max, self.id);
+    fn events(&self) -> Vec<(uint, Event)> {
+        vec![(self.y, Max)]
     }
 
     fn propagate(&self) -> Vec<uint> {
@@ -342,9 +346,53 @@ impl Propagator for LtXYx {
     }
 }
 
-impl fmt::Show for LtXYx {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{} < {}", self.x.to_str(), self.y.to_str())
+pub struct LtXYy {
+    model: Weak<Mod>,
+    id: uint,
+    x: uint,
+    y: uint
+}
+
+impl LtXYy {
+    pub fn new(model: Rc<Mod>, x: Rc<FDVar>, y: Rc<FDVar>) -> Rc<Box<Propagator>> {
+        let id = model.propagators.borrow().len();
+        let this = LtXYy { model: model.downgrade(), id: id, x: x.id, y: y.id };
+        this.register();
+        this.propagate();
+        let p = Rc::new((box this) as Box<Propagator>);
+        model.add_prop(p.clone());
+        p
+    }
+}
+
+impl Propagator for LtXYy {
+    fn id(&self) -> uint {
+        self.id
+    }
+    fn model(&self) -> Weak<Mod> {
+        self.model.clone()
+    }
+
+    fn events(&self) -> Vec<(uint, Event)> {
+        vec![(self.x, Min)]
+    }
+
+    fn propagate(&self) -> Vec<uint> {
+        let model = self.model.upgrade().unwrap();
+        let mut vars = model.vars.borrow_mut();
+        if vars.get(self.x).max() < vars.get(self.y).min() {
+            // entailed
+            self.unregister();
+            vec![]
+        } else if vars.get(self.y).min() < vars.get(self.x).min() + 1 {
+            //if y.is_instanciated() {
+            //   self.unregister();
+            //}
+            let min = vars.get(self.x).min() + 1;
+            vars.get(self.y).set_min(min)
+        } else {
+            vec![]
+        }
     }
 }
 

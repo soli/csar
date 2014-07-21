@@ -1,8 +1,4 @@
-use super::Model;
-use super::Var;
-use super::Domain;
-use super::Dom;
-use super::LtXYx;
+use super::{Model,Var,Domain,Dom,LtXYx,LtXYy};
 
 use std::cell::RefCell;
 
@@ -13,10 +9,10 @@ fn creates_new_var() {
     assert!(x.min() == -2);
     assert!(x.max() == 255);
     assert!(x.id == 0);
-    assert!(m.clone().vars_count.get() == 1);
+    assert!(m.clone().vars.borrow().len() == 1);
     let y = Var::new(m.clone(), -2, 255, "y");
     assert!(y.id == 1);
-    assert!(m.clone().vars_count.get() == 2);
+    assert!(m.clone().vars.borrow().len() == 2);
 }
 
 fn min_is_min(d: &Domain) -> bool {
@@ -177,7 +173,10 @@ fn it_does_propagate() {
     let m = Model::new();
     let x = Var::new(m.clone(), -2, 255, "x");
     let y = Var::new(m.clone(), -2, 255, "y");
-    let p = LtXYx::new(m.clone(), x.clone(), y.clone());
-    assert!(p.id() == 0);
+    let p1 = LtXYx::new(m.clone(), x.clone(), y.clone());
+    assert!(p1.id() == 0);
     assert!(x.max() == 254);
+    let p2 = LtXYy::new(m.clone(), x.clone(), y.clone());
+    assert!(p2.id() == 1);
+    assert!(y.min() == -1);
 }
