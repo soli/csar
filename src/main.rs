@@ -3,6 +3,8 @@
 #![crate_id = "csar#0.2"]
 #![crate_type = "lib"]
 
+#![feature(struct_inherit)]
+
 use std::fmt;
 use std::cell::RefCell;
 use std::collections::hashmap::HashMap;
@@ -32,11 +34,12 @@ struct Domain {
     dom: RefCell<Dom>
 }
 
-pub trait Propagator {
-    fn propagate(&self) -> Vec<uint>;
+trait Propagator {
     fn id(&self) -> uint;
-    fn events(&self) -> Vec<(uint, Event)>;
     fn model(&self) -> Weak<Mod>;
+
+    fn events(&self) -> Vec<(uint, Event)>;
+    fn propagate(&self) -> Vec<uint>;
 
     fn register(&self) {
         for &(var, event) in self.events().iter() {
@@ -49,7 +52,11 @@ pub trait Propagator {
             self.model().upgrade().unwrap().del_waiting(var, event, self.id());
         }
     }
+}
 
+pub virtual struct Prop {
+    id: uint,
+    model: Weak<Mod>
 }
 
 pub struct Var;
@@ -247,7 +254,6 @@ impl Var {
     }
 }
 
-#[allow(dead_code)]
 impl FDVar {
     pub fn min(&self) -> int {
         self.dom.get_min()
@@ -296,9 +302,7 @@ impl fmt::Show for FDVar {
     }
 }
 
-pub struct LtXYx {
-    model: Weak<Mod>,
-    id: uint,
+pub struct LtXYx : Prop {
     x: uint,
     y: uint
 }
@@ -346,9 +350,7 @@ impl Propagator for LtXYx {
     }
 }
 
-pub struct LtXYy {
-    model: Weak<Mod>,
-    id: uint,
+pub struct LtXYy : Prop {
     x: uint,
     y: uint
 }
