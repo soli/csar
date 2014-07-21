@@ -1,22 +1,21 @@
 use super::Model;
+use super::Var;
 use super::Domain;
 use super::Dom;
-use super::FDVar;
 use super::LtXYx;
 
 use std::cell::RefCell;
-use std::rc::Rc;
 
 #[test]
 fn creates_new_var() {
     let m = Model::new();
-    let x = Rc::new(FDVar::new(m.downgrade(), -2, 255, "x"));
+    let x = Var::new(m.downgrade(), -2, 255, "x");
     m.add_var(x.clone());
     assert!(x.min() == -2);
     assert!(x.max() == 255);
     assert!(x.id == 0);
     assert!(m.vars_count.get() == 1);
-    let y = Rc::new(FDVar::new(m.downgrade(), -2, 255, "y"));
+    let y = Var::new(m.downgrade(), -2, 255, "y");
     m.add_var(y.clone());
     assert!(y.id == 1);
     assert!(m.vars_count.get() == 2);
@@ -178,9 +177,9 @@ fn remove_inside() {
 #[test]
 fn it_does_propagate() {
     let m = Model::new();
-    let x = Rc::new(FDVar::new(m.downgrade(), -2, 255, "x"));
+    let x = Var::new(m.downgrade(), -2, 255, "x");
     m.add_var(x.clone());
-    let y = Rc::new(FDVar::new(m.downgrade(), -2, 255, "y"));
+    let y = Var::new(m.downgrade(), -2, 255, "y");
     m.add_var(y.clone());
     let p = LtXYx::new(m.downgrade(), 0, 1);
     assert!(p.id == 0);

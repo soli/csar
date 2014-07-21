@@ -9,7 +9,7 @@ use std::collections::hashmap::HashMap;
 use std::rc::{Rc,Weak};
 
 #[allow(dead_code)]
-struct Mod {
+pub struct Mod {
     vars: RefCell<Vec<Rc<FDVar>>>,
     vars_count: Cell<uint>,
     propagators: RefCell<Vec<Box<Propagator>>>,
@@ -19,6 +19,7 @@ struct Mod {
     waitingOnIns: RefCell<HashMap<uint, Vec<uint>>>
 }
 
+// cannot use type Model = Rc<Mod> since that would forbid using impl Model
 pub struct Model;
 
 /// Representation of finite domains as a list of intervals, maintaining
@@ -42,6 +43,8 @@ pub trait Propagator : ToStr {
     fn register(&mut self);
     fn unregister(&mut self);
 }
+
+pub struct Var;
 
 #[allow(dead_code)]
 #[deriving(Clone)]
@@ -258,20 +261,21 @@ impl fmt::Show for Domain {
     }
 }
 
-#[allow(dead_code)]
-#[allow(visible_private_types)]
-impl FDVar {
-    pub fn new(model: Weak<Mod>, min: int, max: int, name: &str) -> FDVar {
+impl Var {
+    pub fn new(model: Weak<Mod>, min: int, max: int, name: &str) -> Rc<FDVar> {
         assert!(min <= max);
         let id = model.upgrade().unwrap().vars_count.get();
-        FDVar {
+        Rc::new(FDVar {
             model: model,
             id: id,
             name: name.to_string(),
             dom: Domain::new(min, max)
-        }
+        })
     }
+}
 
+#[allow(dead_code)]
+impl FDVar {
     pub fn min(&self) -> int {
         self.dom.get_min()
     }
@@ -326,7 +330,6 @@ pub struct LtXYx {
     y: uint
 }
 
-#[allow(visible_private_types)]
 impl LtXYx {
     pub fn new(model: Weak<Mod>, x: uint, y: uint) -> LtXYx {
         let id = model.upgrade().unwrap().prop_count.get();
