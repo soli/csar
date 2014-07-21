@@ -9,16 +9,14 @@ use std::cell::RefCell;
 #[test]
 fn creates_new_var() {
     let m = Model::new();
-    let x = Var::new(m.downgrade(), -2, 255, "x");
-    m.add_var(x.clone());
+    let x = Var::new(m.clone(), -2, 255, "x");
     assert!(x.min() == -2);
     assert!(x.max() == 255);
     assert!(x.id == 0);
-    assert!(m.vars_count.get() == 1);
-    let y = Var::new(m.downgrade(), -2, 255, "y");
-    m.add_var(y.clone());
+    assert!(m.clone().vars_count.get() == 1);
+    let y = Var::new(m.clone(), -2, 255, "y");
     assert!(y.id == 1);
-    assert!(m.vars_count.get() == 2);
+    assert!(m.clone().vars_count.get() == 2);
 }
 
 fn min_is_min(d: &Domain) -> bool {
@@ -177,11 +175,9 @@ fn remove_inside() {
 #[test]
 fn it_does_propagate() {
     let m = Model::new();
-    let x = Var::new(m.downgrade(), -2, 255, "x");
-    m.add_var(x.clone());
-    let y = Var::new(m.downgrade(), -2, 255, "y");
-    m.add_var(y.clone());
-    let p = LtXYx::new(m.downgrade(), 0, 1);
-    assert!(p.id == 0);
+    let x = Var::new(m.clone(), -2, 255, "x");
+    let y = Var::new(m.clone(), -2, 255, "y");
+    let p = LtXYx::new(m.clone(), x.clone(), y.clone());
+    assert!(p.id() == 0);
     assert!(x.max() == 254);
 }

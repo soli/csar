@@ -12,7 +12,7 @@ use std::rc::{Rc,Weak};
 pub struct Mod {
     vars: RefCell<Vec<Rc<FDVar>>>,
     vars_count: Cell<uint>,
-    propagators: RefCell<Vec<Box<Propagator>>>,
+    propagators: RefCell<Vec<Rc<Box<Propagator>>>>,
     prop_count: Cell<uint>,
     waitingOnMin: RefCell<HashMap<uint, Vec<uint>>>,
     waitingOnMax: RefCell<HashMap<uint, Vec<uint>>>,
@@ -38,10 +38,10 @@ struct Domain {
 }
 
 pub trait Propagator : ToStr {
-    fn id(&mut self) -> uint;
-    fn propagate(&mut self) -> Vec<uint>;
-    fn register(&mut self);
-    fn unregister(&mut self);
+    fn id(&self) -> uint;
+    fn propagate(&self) -> Vec<uint>;
+    fn register(&self);
+    fn unregister(&self);
 }
 
 pub struct Var;
@@ -82,6 +82,11 @@ impl Mod {
     fn add_var(&self, var: Rc<FDVar>) {
         self.vars.borrow_mut().push(var);
         self.vars_count.set(self.vars_count.get() + 1);
+    }
+
+    fn add_prop(&self, prop: Rc<Box<Propagator>>) {
+        self.propagators.borrow_mut().push(prop);
+        self.prop_count.set(self.prop_count.get() + 1);
     }
 
     fn add_waiting_max(&self, var: uint, propagator: uint) {
@@ -262,15 +267,17 @@ impl fmt::Show for Domain {
 }
 
 impl Var {
-    pub fn new(model: Weak<Mod>, min: int, max: int, name: &str) -> Rc<FDVar> {
+    pub fn new(model: Rc<Mod>, min: int, max: int, name: &str) -> Rc<FDVar> {
         assert!(min <= max);
-        let id = model.upgrade().unwrap().vars_count.get();
-        Rc::new(FDVar {
-            model: model,
+        let id = model.vars_count.get();
+        let v = Rc::new(FDVar {
+            model: model.downgrade(),
             id: id,
             name: name.to_string(),
             dom: Domain::new(min, max)
-        })
+        });
+        model.add_var(v.clone());
+        v
     }
 }
 
@@ -331,29 +338,31 @@ pub struct LtXYx {
 }
 
 impl LtXYx {
-    pub fn new(model: Weak<Mod>, x: uint, y: uint) -> LtXYx {
-        let id = model.upgrade().unwrap().prop_count.get();
-        let mut this = LtXYx { model: model, id: id, x: x, y: y };
+    pub fn new(model: Rc<Mod>, x: Rc<FDVar>, y: Rc<FDVar>) -> Rc<Box<Propagator>> {
+        let id = model.prop_count.get();
+        let this = LtXYx { model: model.downgrade(), id: id, x: x.id, y: y.id };
         this.register();
         this.propagate();
-        this
+        let p = Rc::new((box this) as Box<Propagator>);
+        model.add_prop(p.clone());
+        p
     }
 }
 
 impl Propagator for LtXYx {
-    fn id(&mut self) -> uint {
+    fn id(&self) -> uint {
         self.id
     }
 
-    fn register(&mut self) {
+    fn register(&self) {
         self.model.upgrade().unwrap().add_waiting_max(self.y, self.id);
     }
 
-    fn unregister(&mut self) {
+    fn unregister(&self) {
         self.model.upgrade().unwrap().del_waiting_max(self.y, self.id);
     }
 
-    fn propagate(&mut self) -> Vec<uint> {
+    fn propagate(&self) -> Vec<uint> {
         let model = self.model.upgrade().unwrap();
         let mut vars = model.vars.borrow_mut();
         if vars.get(self.x).max() < vars.get(self.y).min() {
