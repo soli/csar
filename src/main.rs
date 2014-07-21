@@ -303,14 +303,14 @@ impl fmt::Show for FDVar {
 }
 
 pub struct LtXYx : Prop {
-    x: uint,
-    y: uint
+    x: Rc<FDVar>,
+    y: Rc<FDVar>
 }
 
 impl LtXYx {
     pub fn new(model: Rc<Mod>, x: Rc<FDVar>, y: Rc<FDVar>) -> Rc<Box<Propagator>> {
         let id = model.propagators.borrow().len();
-        let this = LtXYx { model: model.downgrade(), id: id, x: x.id, y: y.id };
+        let this = LtXYx { model: model.downgrade(), id: id, x: x, y: y };
         this.register();
         this.propagate();
         let p = Rc::new((box this) as Box<Propagator>);
@@ -328,22 +328,20 @@ impl Propagator for LtXYx {
     }
 
     fn events(&self) -> Vec<(uint, Event)> {
-        vec![(self.y, Max)]
+        vec![(self.y.id, Max)]
     }
 
     fn propagate(&self) -> Vec<uint> {
-        let model = self.model.upgrade().unwrap();
-        let mut vars = model.vars.borrow_mut();
-        if vars.get(self.x).max() < vars.get(self.y).min() {
+        if self.x.max() < self.y.min() {
             // entailed
             self.unregister();
             vec![]
-        } else if vars.get(self.x).max() > vars.get(self.y).max() - 1 {
+        } else if self.x.max() > self.y.max() - 1 {
             //if y.is_instanciated() {
             //   self.unregister();
             //}
-            let max = vars.get(self.y).max() - 1;
-            vars.get(self.x).set_max(max)
+            let max = self.y.max() - 1;
+            self.x.set_max(max)
         } else {
             vec![]
         }
@@ -351,14 +349,14 @@ impl Propagator for LtXYx {
 }
 
 pub struct LtXYy : Prop {
-    x: uint,
-    y: uint
+    x: Rc<FDVar>,
+    y: Rc<FDVar>
 }
 
 impl LtXYy {
     pub fn new(model: Rc<Mod>, x: Rc<FDVar>, y: Rc<FDVar>) -> Rc<Box<Propagator>> {
         let id = model.propagators.borrow().len();
-        let this = LtXYy { model: model.downgrade(), id: id, x: x.id, y: y.id };
+        let this = LtXYy { model: model.downgrade(), id: id, x: x, y: y };
         this.register();
         this.propagate();
         let p = Rc::new((box this) as Box<Propagator>);
@@ -376,22 +374,20 @@ impl Propagator for LtXYy {
     }
 
     fn events(&self) -> Vec<(uint, Event)> {
-        vec![(self.x, Min)]
+        vec![(self.x.id, Min)]
     }
 
     fn propagate(&self) -> Vec<uint> {
-        let model = self.model.upgrade().unwrap();
-        let mut vars = model.vars.borrow_mut();
-        if vars.get(self.x).max() < vars.get(self.y).min() {
+        if self.x.max() < self.y.min() {
             // entailed
             self.unregister();
             vec![]
-        } else if vars.get(self.y).min() < vars.get(self.x).min() + 1 {
+        } else if self.y.min() < self.x.min() + 1 {
             //if y.is_instanciated() {
             //   self.unregister();
             //}
-            let min = vars.get(self.x).min() + 1;
-            vars.get(self.y).set_min(min)
+            let min = self.x.min() + 1;
+            self.y.set_min(min)
         } else {
             vec![]
         }
