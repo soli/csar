@@ -1,4 +1,4 @@
-use super::{Model,Var,Domain,Dom,LtXYx,LtXYy};
+use super::{Model, Var, Domain, Dom, LtXY};
 
 use std::cell::RefCell;
 
@@ -173,10 +173,7 @@ fn it_does_propagate() {
     let m = Model::new();
     let x = Var::new(m.clone(), -2, 255, "x");
     let y = Var::new(m.clone(), -2, 255, "y");
-    let p1 = LtXYx::new(m.clone(), x.clone(), y.clone());
-    assert!(p1.id() == 0);
+    LtXY::new(m.clone(), x.clone(), y.clone());
     assert!(x.max() == 254);
-    let p2 = LtXYy::new(m.clone(), x.clone(), y.clone());
-    assert!(p2.id() == 1);
     assert!(y.min() == -1);
 }
