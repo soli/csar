@@ -46,7 +46,6 @@ pub trait Propagator : ToStr {
 
 pub struct Var;
 
-#[allow(dead_code)]
 #[deriving(Clone)]
 pub struct FDVar {
     model: Weak<Mod>,
