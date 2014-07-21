@@ -14,9 +14,7 @@ pub struct Mod {
     vars_count: Cell<uint>,
     propagators: RefCell<Vec<Rc<Box<Propagator>>>>,
     prop_count: Cell<uint>,
-    waitingOnMin: RefCell<HashMap<uint, Vec<uint>>>,
-    waitingOnMax: RefCell<HashMap<uint, Vec<uint>>>,
-    waitingOnIns: RefCell<HashMap<uint, Vec<uint>>>
+    waiting: RefCell<HashMap<(uint, Event), Vec<uint>>>
 }
 
 // cannot use type Model = Rc<Mod> since that would forbid using impl Model
@@ -54,7 +52,7 @@ pub struct FDVar {
     dom: Domain
 }
 
-#[deriving(Show)]
+#[deriving(Show,Hash,Eq,PartialEq)]
 pub enum Event {
     Min,
     Max,
@@ -69,9 +67,7 @@ impl Model {
             vars: RefCell::new(Vec::new()),
             prop_count: Cell::new(0),
             propagators: RefCell::new(Vec::new()),
-            waitingOnMin: RefCell::new(HashMap::new()),
-            waitingOnMax: RefCell::new(HashMap::new()),
-            waitingOnIns: RefCell::new(HashMap::new())
+            waiting: RefCell::new(HashMap::new())
         })
     }
 }
@@ -88,56 +84,22 @@ impl Mod {
         self.prop_count.set(self.prop_count.get() + 1);
     }
 
-    fn add_waiting_max(&self, var: uint, propagator: uint) {
-        let mut waiting = self.waitingOnMax.borrow_mut();
-        if waiting.contains_key(&var) {
-            waiting.get_mut(&var).push(propagator);
+    fn add_waiting(&self, var: uint, event: Event, propagator: uint) {
+        let mut waiting = self.waiting.borrow_mut();
+        if waiting.contains_key(&(var, event)) {
+            waiting.get_mut(&(var, event)).push(propagator);
         } else {
-            waiting.insert(var, vec![propagator]);
+            waiting.insert((var, event), vec![propagator]);
         }
     }
 
-    fn add_waiting_min(&self, var: uint, propagator: uint) {
-        let mut waiting = self.waitingOnMin.borrow_mut();
-        if waiting.contains_key(&var) {
-            waiting.get_mut(&var).push(propagator);
-        } else {
-            waiting.insert(var, vec![propagator]);
-        }
+    fn del_waiting(&self, var: uint, event: Event, propagator: uint) {
+        self.waiting.borrow_mut().get_mut(&(var, event)).remove(propagator);
     }
 
-    fn add_waiting_ins(&self, var: uint, propagator: uint) {
-        let mut waiting = self.waitingOnIns.borrow_mut();
-        if waiting.contains_key(&var) {
-            waiting.get_mut(&var).push(propagator);
-        } else {
-            waiting.insert(var, vec![propagator]);
-        }
-    }
-
-    fn del_waiting_max(&self, var: uint, propagator: uint) {
-        self.waitingOnMax.borrow_mut().get_mut(&var).remove(propagator);
-    }
-
-    fn get_waiting_on_min(&self, var: uint) -> Vec<uint> {
-        let waiting = self.waitingOnMin.borrow();
-        match waiting.find_copy(&var) {
-            Some(vec) => vec,
-            None => Vec::new()
-        }
-    }
-
-    fn get_waiting_on_max(&self, var: uint) -> Vec<uint> {
-        let waiting = self.waitingOnMax.borrow();
-        match waiting.find_copy(&var) {
-            Some(vec) => vec,
-            None => Vec::new()
-        }
-    }
-
-    fn get_waiting_on_ins(&self, var: uint) -> Vec<uint> {
-        let waiting = self.waitingOnIns.borrow();
-        match waiting.find_copy(&var) {
+    fn get_waiting(&self, var: uint, event: Event) -> Vec<uint> {
+        let waiting = self.waiting.borrow();
+        match waiting.find_copy(&(var, event)) {
             Some(vec) => vec,
             None => Vec::new()
         }
@@ -294,10 +256,10 @@ impl FDVar {
         if v > self.min() {
             self.dom.set_min(v);
             if self.is_instanciated() {
-                self.model.upgrade().unwrap().get_waiting_on_min(self.id)
+                self.model.upgrade().unwrap().get_waiting(self.id, Min)
                     // + self.waitingOnIns
             } else {
-                self.model.upgrade().unwrap().get_waiting_on_min(self.id)
+                self.model.upgrade().unwrap().get_waiting(self.id, Min)
             }
         } else {
             vec![]
@@ -309,9 +271,9 @@ impl FDVar {
             self.dom.set_max(v);
             if self.is_instanciated() {
                 // self.waitingOnMax + self.waitingOnIns
-                self.model.upgrade().unwrap().get_waiting_on_max(self.id)
+                self.model.upgrade().unwrap().get_waiting(self.id, Max)
             } else {
-                self.model.upgrade().unwrap().get_waiting_on_max(self.id)
+                self.model.upgrade().unwrap().get_waiting(self.id, Max)
             }
         } else {
             vec![]
@@ -354,11 +316,11 @@ impl Propagator for LtXYx {
     }
 
     fn register(&self) {
-        self.model.upgrade().unwrap().add_waiting_max(self.y, self.id);
+        self.model.upgrade().unwrap().add_waiting(self.y, Max, self.id);
     }
 
     fn unregister(&self) {
-        self.model.upgrade().unwrap().del_waiting_max(self.y, self.id);
+        self.model.upgrade().unwrap().del_waiting(self.y, Max, self.id);
     }
 
     fn propagate(&self) -> Vec<uint> {
