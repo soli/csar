@@ -127,8 +127,6 @@ impl LtXYCx {
     fn new(model: Rc<Mod>, x: Rc<FDVar>, y: Rc<FDVar>, c: int) -> Rc<Box<Propagator>> {
         let id = model.propagators.borrow().len();
         let this = LtXYCx { model: model.downgrade(), id: id, vars: vec![x, y], c: c};
-        this.register();
-        this.propagate();
         let p = Rc::new((box this) as Box<Propagator>);
         model.add_prop(p.clone());
         p
@@ -180,8 +178,6 @@ impl LtXYCy {
     fn new(model: Rc<Mod>, x: Rc<FDVar>, y: Rc<FDVar>, c: int) -> Rc<Box<Propagator>> {
         let id = model.propagators.borrow().len();
         let this = LtXYCy { model: model.downgrade(), id: id, vars: vec![x, y], c: c};
-        this.register();
-        this.propagate();
         let p = Rc::new((box this) as Box<Propagator>);
         model.add_prop(p.clone());
         p

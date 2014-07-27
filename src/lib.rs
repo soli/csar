@@ -102,7 +102,9 @@ impl Mod {
     }
 
     fn add_prop(&self, prop: Rc<Box<Propagator>>) {
-        self.propagators.borrow_mut().push(prop);
+        self.propagators.borrow_mut().push(prop.clone());
+        prop.register();
+        self.propagate(self.propagators.borrow().len() - 1);
     }
 
     fn add_waiting(&self, var: uint, event: Event, propagator: uint) {
@@ -124,6 +126,10 @@ impl Mod {
             Some(vec) => vec,
             None => Vec::new()
         }
+    }
+
+    fn propagate(&self, id: uint) {
+        self.propagators.borrow().get(id).propagate();
     }
 }
 
