@@ -1,4 +1,4 @@
-use super::{Model, Var, Domain, Dom, LtXY};
+use super::{Model, Var, Domain, Dom};
 
 use std::cell::RefCell;
 
@@ -6,13 +6,11 @@ use std::cell::RefCell;
 fn creates_new_var() {
     let m = Model::new();
     let x = Var::new(m.clone(), -2, 255, "x");
-    assert!(x.min() == -2);
-    assert!(x.max() == 255);
-    assert!(x.id == 0);
-    assert!(m.clone().vars.borrow().len() == 1);
+    assert_eq!((x.id, x.min(), x.max()), (0, -2, 255));
+    assert_eq!(m.clone().vars.borrow().len(), 1);
     let y = Var::new(m.clone(), -2, 255, "y");
-    assert!(y.id == 1);
-    assert!(m.clone().vars.borrow().len() == 2);
+    assert_eq!(y.id, 1);
+    assert_eq!(m.clone().vars.borrow().len(), 2);
 }
 
 fn min_is_min(d: &Domain) -> bool {
@@ -47,7 +45,7 @@ fn intervals_bounds_are_coherent(d: &Domain) {
 fn sets_min_lower() {
     let d = setup_domain_simple();
     d.set_min(-4);
-    assert!(d.get_min() == -3);
+    assert_eq!(d.get_min(), -3);
     intervals_bounds_are_coherent(&d);
 }
 
@@ -60,8 +58,8 @@ fn sets_min_middle() {
     for i in range(0, values.len()) {
         v = values[i];
         d.set_min(v);
-        assert!(d.get_min() == v);
-        assert!(d.dom.borrow().intervals.len() == lengths[i])
+        assert_eq!(d.get_min(), v);
+        assert_eq!(d.dom.borrow().intervals.len(), lengths[i])
     }
     intervals_bounds_are_coherent(&d);
 }
@@ -70,7 +68,7 @@ fn sets_min_middle() {
 fn sets_min_in_hole() {
     let d = setup_domain_simple();
     d.set_min(43);
-    assert!(d.get_min() == 54);
+    assert_eq!(d.get_min(), 54);
     intervals_bounds_are_coherent(&d);
 }
 
@@ -79,7 +77,7 @@ fn sets_min_in_hole() {
 fn sets_min_too_high() {
     let d = setup_domain_simple();
     d.set_min(65);
-    assert!(d.get_min() == -3);
+    assert_eq!(d.get_min(), -3);
     intervals_bounds_are_coherent(&d);
 }
 
@@ -87,7 +85,7 @@ fn sets_min_too_high() {
 fn sets_max_higher() {
     let d = setup_domain_simple();
     d.set_max(65);
-    assert!(d.get_max() == 64);
+    assert_eq!(d.get_max(), 64);
     intervals_bounds_are_coherent(&d);
 }
 
@@ -100,8 +98,8 @@ fn sets_max_middle() {
     for i in range(0, values.len()) {
         v = values[i];
         d.set_max(v);
-        assert!(d.get_max() == v);
-        assert!(d.dom.borrow().intervals.len() == lengths[i])
+        assert_eq!(d.get_max(), v);
+        assert_eq!(d.dom.borrow().intervals.len(), lengths[i])
     }
     intervals_bounds_are_coherent(&d);
 }
@@ -110,7 +108,7 @@ fn sets_max_middle() {
 fn sets_max_in_hole() {
     let d = setup_domain_simple();
     d.set_max(43);
-    assert!(d.get_max() == 42);
+    assert_eq!(d.get_max(), 42);
     intervals_bounds_are_coherent(&d);
 }
 
@@ -119,7 +117,7 @@ fn sets_max_in_hole() {
 fn sets_max_too_low() {
     let d = setup_domain_simple();
     d.set_max(-4);
-    assert!(d.get_max() == 64);
+    assert_eq!(d.get_max(), 64);
     intervals_bounds_are_coherent(&d);
 }
 
@@ -145,9 +143,9 @@ fn remove_outside() {
     d.remove(35);
     d.remove(48);
     d.remove(128);
-    assert!(d.dom.borrow().intervals.len() == e.dom.borrow().intervals.len());
+    assert_eq!(d.dom.borrow().intervals.len(), e.dom.borrow().intervals.len());
     for i in range(0, d.dom.borrow().intervals.len()) {
-        assert!(d.dom.borrow().intervals.get(i) == e.dom.borrow().intervals.get(i));
+        assert_eq!(d.dom.borrow().intervals.get(i), e.dom.borrow().intervals.get(i));
     }
     intervals_bounds_are_coherent(&d);
 }
@@ -164,16 +162,6 @@ fn remove_inside() {
             assert!(v < x || v > y, format!("{} is not outside [{}..{}]", v, x, y));
         }
     }
-    assert!(d.dom.borrow().intervals.len() == 8);
+    assert_eq!(d.dom.borrow().intervals.len(), 8);
     intervals_bounds_are_coherent(&d);
-}
-
-#[test]
-fn it_does_propagate() {
-    let m = Model::new();
-    let x = Var::new(m.clone(), -2, 255, "x");
-    let y = Var::new(m.clone(), -2, 255, "y");
-    LtXY::new(m.clone(), x.clone(), y.clone());
-    assert!(x.max() == 254);
-    assert!(y.min() == -1);
 }
