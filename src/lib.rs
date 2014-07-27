@@ -4,13 +4,14 @@
 #![crate_type = "lib"]
 
 #![feature(struct_inherit)]
+#![feature(globs)]
 
 use std::fmt;
 use std::cell::RefCell;
 use std::collections::hashmap::HashMap;
 use std::rc::{Rc, Weak};
 
-pub use LtXY = self::ltxy::LtXY;
+pub use self::ltxy::{LtXY, LtXYC, LeXY, LeXYC, GtXY, GtXYC, GeXY, GeXYC};
 
 #[allow(dead_code)]
 pub struct Mod {

@@ -1,17 +1,10 @@
 use super::{Event, Max, Min, Prop, Mod, FDVar, Propagator};
 
-#[cfg(test)]
-use super::{Model, Var};
-
 use std::rc::{Rc, Weak};
 
 #[allow(dead_code)]
 /// X < Y
 pub struct LtXY;
-
-#[allow(dead_code)]
-/// X < Y + C
-pub struct LtXYC;
 
 #[allow(dead_code)]
 impl LtXY {
@@ -21,10 +14,80 @@ impl LtXY {
 }
 
 #[allow(dead_code)]
+/// X < Y + C
+pub struct LtXYC;
+
+#[allow(dead_code)]
 impl LtXYC {
     pub fn new(model: Rc<Mod>, x: Rc<FDVar>, y: Rc<FDVar>, c: int) {
         LtXYCx::new(model.clone(), x.clone(), y.clone(), c);
         LtXYCy::new(model.clone(), x.clone(), y.clone(), c);
+    }
+}
+
+#[allow(dead_code)]
+/// X =< Y
+pub struct LeXY;
+
+#[allow(dead_code)]
+impl LeXY {
+    pub fn new(model: Rc<Mod>, x: Rc<FDVar>, y: Rc<FDVar>) {
+        LtXYC::new(model, x, y, 1);
+    }
+}
+
+#[allow(dead_code)]
+/// X =< Y + C
+pub struct LeXYC;
+
+#[allow(dead_code)]
+impl LeXYC {
+    pub fn new(model: Rc<Mod>, x: Rc<FDVar>, y: Rc<FDVar>, c: int) {
+        LtXYC::new(model, x, y, c + 1);
+    }
+}
+
+#[allow(dead_code)]
+/// X > Y
+pub struct GtXY;
+
+#[allow(dead_code)]
+impl GtXY {
+    pub fn new(model: Rc<Mod>, x: Rc<FDVar>, y: Rc<FDVar>) {
+        LtXYC::new(model, y, x, 0);
+    }
+}
+
+#[allow(dead_code)]
+/// X > Y + C
+pub struct GtXYC;
+
+#[allow(dead_code)]
+impl GtXYC {
+    pub fn new(model: Rc<Mod>, x: Rc<FDVar>, y: Rc<FDVar>, c: int) {
+        LtXYC::new(model, y, x, -c);
+    }
+}
+
+#[allow(dead_code)]
+/// X >= Y
+pub struct GeXY;
+
+#[allow(dead_code)]
+impl GeXY {
+    pub fn new(model: Rc<Mod>, x: Rc<FDVar>, y: Rc<FDVar>) {
+        LtXYC::new(model, y, x, 1);
+    }
+}
+
+#[allow(dead_code)]
+/// X >= Y + C
+pub struct GeXYC;
+
+#[allow(dead_code)]
+impl GeXYC {
+    pub fn new(model: Rc<Mod>, x: Rc<FDVar>, y: Rc<FDVar>, c: int) {
+        LtXYC::new(model, y, x, 1 - c);
     }
 }
 
@@ -136,15 +199,5 @@ impl Propagator for LtXYCy {
     }
 }
 
-#[test]
-fn it_does_propagate() {
-    let m = Model::new();
-    let x = Var::new(m.clone(), -2, 255, "x");
-    let y = Var::new(m.clone(), -2, 255, "y");
-    let p1 = LtXYCx::new(m.clone(), x.clone(), y.clone(), -2);
-    assert!(p1.id() == 0);
-    assert!(x.max() == 252);
-    let p2 = LtXYCy::new(m.clone(), x.clone(), y.clone(), -2);
-    assert!(p2.id() == 1);
-    assert!(y.min() == 1);
-}
+#[cfg(test)]
+mod tests;

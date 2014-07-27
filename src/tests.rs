@@ -38,7 +38,7 @@ fn setup_domain_simple() -> Domain {
     }
 }
 
-fn teardown(d: &Domain) {
+fn intervals_bounds_are_coherent(d: &Domain) {
     assert!(min_is_min(d));
     assert!(max_is_max(d));
 }
@@ -48,7 +48,7 @@ fn sets_min_lower() {
     let d = setup_domain_simple();
     d.set_min(-4);
     assert!(d.get_min() == -3);
-    teardown(&d);
+    intervals_bounds_are_coherent(&d);
 }
 
 #[test]
@@ -63,7 +63,7 @@ fn sets_min_middle() {
         assert!(d.get_min() == v);
         assert!(d.dom.borrow().intervals.len() == lengths[i])
     }
-    teardown(&d);
+    intervals_bounds_are_coherent(&d);
 }
 
 #[test]
@@ -71,7 +71,7 @@ fn sets_min_in_hole() {
     let d = setup_domain_simple();
     d.set_min(43);
     assert!(d.get_min() == 54);
-    teardown(&d);
+    intervals_bounds_are_coherent(&d);
 }
 
 #[test]
@@ -80,7 +80,7 @@ fn sets_min_too_high() {
     let d = setup_domain_simple();
     d.set_min(65);
     assert!(d.get_min() == -3);
-    teardown(&d);
+    intervals_bounds_are_coherent(&d);
 }
 
 #[test]
@@ -88,7 +88,7 @@ fn sets_max_higher() {
     let d = setup_domain_simple();
     d.set_max(65);
     assert!(d.get_max() == 64);
-    teardown(&d);
+    intervals_bounds_are_coherent(&d);
 }
 
 #[test]
@@ -103,7 +103,7 @@ fn sets_max_middle() {
         assert!(d.get_max() == v);
         assert!(d.dom.borrow().intervals.len() == lengths[i])
     }
-    teardown(&d);
+    intervals_bounds_are_coherent(&d);
 }
 
 #[test]
@@ -111,7 +111,7 @@ fn sets_max_in_hole() {
     let d = setup_domain_simple();
     d.set_max(43);
     assert!(d.get_max() == 42);
-    teardown(&d);
+    intervals_bounds_are_coherent(&d);
 }
 
 #[test]
@@ -120,7 +120,7 @@ fn sets_max_too_low() {
     let d = setup_domain_simple();
     d.set_max(-4);
     assert!(d.get_max() == 64);
-    teardown(&d);
+    intervals_bounds_are_coherent(&d);
 }
 
 fn setup_domain_holy() -> Domain {
@@ -149,7 +149,7 @@ fn remove_outside() {
     for i in range(0, d.dom.borrow().intervals.len()) {
         assert!(d.dom.borrow().intervals.get(i) == e.dom.borrow().intervals.get(i));
     }
-    teardown(&d);
+    intervals_bounds_are_coherent(&d);
 }
 
 #[test]
@@ -165,7 +165,7 @@ fn remove_inside() {
         }
     }
     assert!(d.dom.borrow().intervals.len() == 8);
-    teardown(&d);
+    intervals_bounds_are_coherent(&d);
 }
 
 #[test]
