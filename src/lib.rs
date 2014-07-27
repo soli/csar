@@ -129,7 +129,19 @@ impl Mod {
     }
 
     fn propagate(&self, id: uint) {
-        self.propagators.borrow().get(id).propagate();
+        println!("propagating for {}", id.to_str());
+        let woken = self.propagators.borrow().get(id).propagate();
+        println!("waking {}", woken.to_str());
+        for &propid in woken.iter() {
+            self.propagate(propid);
+        }
+    }
+
+    fn propagate_vec(&self, ids: Vec<uint>) {
+        println!("propagating for {}", ids.to_str());
+        for &propid in ids.iter() {
+            self.propagate(propid);
+        }
     }
 }
 
@@ -281,11 +293,11 @@ impl FDVar {
     fn set_min(&self, v: int) -> Vec<uint> {
         if v > self.min() {
             self.dom.set_min(v);
+            let model = self.model.upgrade().unwrap();
             if self.is_instanciated() {
-                self.model.upgrade().unwrap().get_waiting(self.id, Min)
-                    // + self.waitingOnIns
+                model.get_waiting(self.id, Min).append(model.get_waiting(self.id, Ins).as_slice())
             } else {
-                self.model.upgrade().unwrap().get_waiting(self.id, Min)
+                model.get_waiting(self.id, Min)
             }
         } else {
             vec![]
@@ -295,11 +307,11 @@ impl FDVar {
     fn set_max(&self, v: int) -> Vec<uint> {
         if v < self.max() {
             self.dom.set_max(v);
+            let model = self.model.upgrade().unwrap();
             if self.is_instanciated() {
-                // self.waitingOnMax + self.waitingOnIns
-                self.model.upgrade().unwrap().get_waiting(self.id, Max)
+                model.get_waiting(self.id, Max).append(model.get_waiting(self.id, Ins).as_slice())
             } else {
-                self.model.upgrade().unwrap().get_waiting(self.id, Max)
+                model.get_waiting(self.id, Max)
             }
         } else {
             vec![]

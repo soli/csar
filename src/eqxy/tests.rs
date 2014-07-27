@@ -42,7 +42,6 @@ fn eqxc_does_propagate() {
 }
 
 #[test]
-#[ignore]   // FIXME waking up propagators
 fn neqxy_does_propagate() {
     let m = Model::new();
     let x = Var::new(m.clone(), 8, 255, "x");

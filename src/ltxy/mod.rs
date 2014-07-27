@@ -24,11 +24,9 @@ impl LtXYC {
 /// X < C
 pub struct LtXC;
 
-#[allow(unused_variable)]
 impl LtXC {
     pub fn new(model: Rc<Mod>, x: Rc<FDVar>, c: int) {
-        // FIXME do not throw away events...
-        x.set_max(c - 1);
+        model.propagate_vec(x.set_max(c - 1));
     }
 }
 
@@ -53,11 +51,9 @@ impl LeXYC {
 /// X =< C
 pub struct LeXC;
 
-#[allow(unused_variable)]
 impl LeXC {
     pub fn new(model: Rc<Mod>, x: Rc<FDVar>, c: int) {
-        // FIXME do not throw away events...
-        x.set_max(c);
+        model.propagate_vec(x.set_max(c));
     }
 }
 
@@ -82,11 +78,9 @@ impl GtXYC {
 /// X > C
 pub struct GtXC;
 
-#[allow(unused_variable)]
 impl GtXC {
     pub fn new(model: Rc<Mod>, x: Rc<FDVar>, c: int) {
-        // FIXME do not throw away events...
-        x.set_min(c + 1);
+        model.propagate_vec(x.set_min(c + 1));
     }
 }
 
@@ -111,11 +105,9 @@ impl GeXYC {
 /// X >= C
 pub struct GeXC;
 
-#[allow(unused_variable)]
 impl GeXC {
     pub fn new(model: Rc<Mod>, x: Rc<FDVar>, c: int) {
-        // FIXME do not throw away events...
-        x.set_min(c);
+        model.propagate_vec(x.set_min(c));
     }
 }
 
