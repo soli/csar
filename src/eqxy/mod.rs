@@ -68,12 +68,11 @@ struct NeqXYCxy : Prop {
 }
 
 impl NeqXYCxy {
-    fn new(model: Rc<Mod>, x: Rc<FDVar>, y: Rc<FDVar>, c: int) -> Rc<Box<Propagator>> {
+    fn new(model: Rc<Mod>, x: Rc<FDVar>, y: Rc<FDVar>, c: int) {
         let id = model.propagators.borrow().len();
         let this = NeqXYCxy { model: model.downgrade(), id: id, vars: vec![x, y], c: c};
         let p = Rc::new((box this) as Box<Propagator>);
-        model.add_prop(p.clone());
-        p
+        model.add_prop(p);
     }
 
     fn x(&self) -> Rc<FDVar> {

@@ -6,12 +6,12 @@ fn neqxycxy_does_propagate() {
     let m = Model::new();
     let x = Var::new(m.clone(), -2, 255, "x");
     let y = Var::new(m.clone(), 10, 10, "y");
-    let p1 = NeqXYCxy::new(m.clone(), x.clone(), y.clone(), -11);
-    assert_eq!((p1.id(), x.min(), x.max()), (0, -2, 255));
-    let p2 = NeqXYCxy::new(m.clone(), x.clone(), y.clone(), -12);
-    assert_eq!((p2.id(), x.min(), x.max()), (1, 0, 255));
-    let p3 = NeqXYCxy::new(m.clone(), x.clone(), y.clone(), 245);
-    assert_eq!((p3.id(), x.min(), x.max()), (2, 0, 254));
+    NeqXYCxy::new(m.clone(), x.clone(), y.clone(), -11);
+    assert_eq!((x.min(), x.max()), (-2, 255));
+    NeqXYCxy::new(m.clone(), x.clone(), y.clone(), -12);
+    assert_eq!((x.min(), x.max()), (0, 255));
+    NeqXYCxy::new(m.clone(), x.clone(), y.clone(), 245);
+    assert_eq!((x.min(), x.max()), (0, 254));
 }
 
 #[test]

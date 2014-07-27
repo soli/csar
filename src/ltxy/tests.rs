@@ -6,10 +6,10 @@ fn propagator_does_propagate() {
     let m = Model::new();
     let x = Var::new(m.clone(), -2, 255, "x");
     let y = Var::new(m.clone(), -2, 255, "y");
-    let p1 = LtXYCx::new(m.clone(), x.clone(), y.clone(), -2);
-    assert_eq!((p1.id(), x.max()), (0, 252));
-    let p2 = LtXYCy::new(m.clone(), x.clone(), y.clone(), -2);
-    assert_eq!((p2.id(), y.min()), (1, 1));
+    LtXYCx::new(m.clone(), x.clone(), y.clone(), -2);
+    assert_eq!(x.max(), 252);
+    LtXYCy::new(m.clone(), x.clone(), y.clone(), -2);
+    assert_eq!(y.min(), 1);
 }
 
 #[test]
