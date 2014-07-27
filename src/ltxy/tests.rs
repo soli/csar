@@ -1,4 +1,4 @@
-use super::super::{Model, Var, LtXY, GtXY, LeXY, GeXY, LtXYC, GtXYC, LeXYC, GeXYC};
+use super::super::{Model, Var, LtXY, GtXY, LeXY, GeXY, LtXYC, GtXYC, LeXYC, GeXYC, LtXC, GtXC, LeXC, GeXC};
 use super::{LtXYCx, LtXYCy};
 
 #[test]
@@ -82,4 +82,36 @@ fn gexyc_does_propagate() {
     let y = Var::new(m.clone(), 2, 255, "y");
     GeXYC::new(m.clone(), x.clone(), y.clone(), 3);
     assert_eq!((x.min(), y.max()), (5, 249));
+}
+
+#[test]
+fn ltxc_does_propagate() {
+    let m = Model::new();
+    let x = Var::new(m.clone(), -2, 252, "x");
+    LtXC::new(m.clone(), x.clone(), 3);
+    assert_eq!((x.min(), x.max()), (-2, 2));
+}
+
+#[test]
+fn lexc_does_propagate() {
+    let m = Model::new();
+    let x = Var::new(m.clone(), -2, 252, "x");
+    LeXC::new(m.clone(), x.clone(), 3);
+    assert_eq!((x.min(), x.max()), (-2, 3));
+}
+
+#[test]
+fn gtxc_does_propagate() {
+    let m = Model::new();
+    let x = Var::new(m.clone(), -2, 252, "x");
+    GtXC::new(m.clone(), x.clone(), 3);
+    assert_eq!((x.min(), x.max()), (4, 252));
+}
+
+#[test]
+fn gexc_does_propagate() {
+    let m = Model::new();
+    let x = Var::new(m.clone(), -2, 252, "x");
+    GeXC::new(m.clone(), x.clone(), 3);
+    assert_eq!((x.min(), x.max()), (3, 252));
 }

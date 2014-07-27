@@ -11,7 +11,8 @@ use std::cell::RefCell;
 use std::collections::hashmap::HashMap;
 use std::rc::{Rc, Weak};
 
-pub use self::ltxy::{LtXY, LtXYC, LeXY, LeXYC, GtXY, GtXYC, GeXY, GeXYC};
+pub use ltxy::{LtXY, LtXYC, LeXY, LeXYC, GtXY, GtXYC, GeXY, GeXYC, LtXC, GtXC, LeXC, GeXC};
+pub use eqxy::{EqXY, EqXYC, EqXC, NeqXY, NeqXYC, NeqXC};
 
 #[allow(dead_code)]
 pub struct Mod {
@@ -299,6 +300,20 @@ impl FDVar {
         }
     }
 
+    fn remove(&self, v: int) -> Vec<uint> {
+        let min = self.min();
+        let max = self.max();
+        match v {
+            vv if vv < min || vv > max => vec![],
+            vv if vv == min => self.set_min(vv + 1),
+            vv if vv == max => self.set_max(vv - 1),
+            _ => {
+                self.dom.remove(v);
+                vec![]
+            }
+        }
+    }
+
     fn is_instanciated(&self) -> bool {
         self.min() == self.max()
     }
@@ -311,6 +326,7 @@ impl fmt::Show for FDVar {
 }
 
 mod ltxy;
+mod eqxy;
 
 #[cfg(test)]
 mod tests;
