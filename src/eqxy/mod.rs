@@ -7,7 +7,7 @@ pub struct EqXY;
 
 impl EqXY {
     pub fn new(model: Rc<Mod>, x: Rc<FDVar>, y: Rc<FDVar>) {
-        // TODO merge
+        // TODO merge or at least intersect domains
         LeXY::new(model.clone(), x.clone(), y.clone());
         GeXY::new(model, x, y);
     }
@@ -18,7 +18,7 @@ pub struct EqXYC;
 
 impl EqXYC {
     pub fn new(model: Rc<Mod>, x: Rc<FDVar>, y: Rc<FDVar>, c: int) {
-        // TODO merge
+        // TODO merge or at least intersect domains
         LeXYC::new(model.clone(), x.clone(), y.clone(), c);
         GeXYC::new(model, x, y, c);
     }

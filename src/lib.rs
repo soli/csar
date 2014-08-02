@@ -28,7 +28,7 @@ pub struct Model;
 /// Representation of finite domains as a list of intervals, maintaining
 /// min and max for easy/quick access
 #[deriving(Clone)]
-struct Dom {
+struct IntervalDom {
     min: int,
     max: int,
     intervals: Vec<(int, int)>
@@ -36,8 +36,8 @@ struct Dom {
 
 /// Runtime checked mutability with borrowing
 #[deriving(Clone)]
-struct Domain {
-    dom: RefCell<Dom>
+struct IntervalDomain {
+    dom: RefCell<IntervalDom>
 }
 
 trait Propagator {
@@ -71,7 +71,7 @@ pub struct FDVar {
     model: Weak<Mod>,
     id: uint,
     name: String,
-    dom: Domain
+    dom: IntervalDomain
 }
 
 /// wrapping FDVar in an Rc
@@ -146,11 +146,11 @@ impl Mod {
 }
 
 #[allow(dead_code)]
-impl Domain {
-    /// Domain created with initial bounds
-    fn new(min: int, max: int) -> Domain {
-        Domain {
-            dom: RefCell::new(Dom {
+impl IntervalDomain {
+    /// IntervalDomain created with initial bounds
+    fn new(min: int, max: int) -> IntervalDomain {
+        IntervalDomain {
+            dom: RefCell::new(IntervalDom {
                      min: min,
                      max: max,
                      intervals: vec![(min, max)]
@@ -255,7 +255,7 @@ impl Domain {
     }
 }
 
-impl fmt::Show for Domain {
+impl fmt::Show for IntervalDomain {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let dom = self.dom.borrow();
         let mut s = format!("({}, {}) [", dom.min, dom.max);
@@ -274,7 +274,7 @@ impl Var {
             model: model.downgrade(),
             id: id,
             name: name.to_string(),
-            dom: Domain::new(min, max)
+            dom: IntervalDomain::new(min, max)
         });
         model.add_var(v.clone());
         v

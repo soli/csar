@@ -1,4 +1,4 @@
-use super::{Model, Var, Domain, Dom};
+use super::{Model, Var, IntervalDomain, IntervalDom};
 
 use std::cell::RefCell;
 
@@ -13,22 +13,22 @@ fn creates_new_var() {
     assert_eq!(m.clone().vars.borrow().len(), 2);
 }
 
-fn min_is_min(d: &Domain) -> bool {
+fn min_is_min(d: &IntervalDomain) -> bool {
     match d.dom.borrow().intervals.get(0) {
         &(x, _) => x == d.get_min()
     }
 }
 
-fn max_is_max(d: &Domain) -> bool {
+fn max_is_max(d: &IntervalDomain) -> bool {
     match d.dom.borrow().intervals.last() {
         Some(&(_, y)) => y == d.get_max(),
         _             => false
     }
 }
 
-fn setup_domain_simple() -> Domain {
-    Domain {
-        dom: RefCell::new(Dom {
+fn setup_domain_simple() -> IntervalDomain {
+    IntervalDomain {
+        dom: RefCell::new(IntervalDom {
                  min: -3,
                  max: 64,
                  intervals: vec![(-3, 2), (4, 42), (54, 64)]
@@ -36,7 +36,7 @@ fn setup_domain_simple() -> Domain {
     }
 }
 
-fn intervals_bounds_are_coherent(d: &Domain) {
+fn intervals_bounds_are_coherent(d: &IntervalDomain) {
     assert!(min_is_min(d));
     assert!(max_is_max(d));
 }
@@ -121,9 +121,9 @@ fn sets_max_too_low() {
     intervals_bounds_are_coherent(&d);
 }
 
-fn setup_domain_holy() -> Domain {
-    Domain {
-        dom: RefCell::new(Dom {
+fn setup_domain_holy() -> IntervalDomain {
+    IntervalDomain {
+        dom: RefCell::new(IntervalDom {
                  min: -3,
                  max: 64,
                  intervals: vec![(-3, 2), (4, 18), (20, 24), (30, 30),
