@@ -1,4 +1,4 @@
-use super::{Model, Var, IntervalDomain, IntervalDom};
+use super::{Model, Var, Domain, IntervalDomain, IntervalDom, BitDomain};
 
 use std::cell::RefCell;
 
@@ -164,4 +164,18 @@ fn remove_inside() {
     }
     assert_eq!(d.dom.borrow().intervals.len(), 8);
     intervals_bounds_are_coherent(&d);
+}
+
+#[test]
+#[should_fail]
+#[allow(unused_variable)]
+fn bitdomain_is_small() {
+    let d : BitDomain = Domain::new(-5, 59);
+}
+
+
+#[test]
+fn bitdomain_is_consistent() {
+    let d : BitDomain = Domain::new(-4, 59);
+    assert_eq!((-4, 59), (d.get_min(), d.get_max()));
 }

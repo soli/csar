@@ -25,6 +25,16 @@ pub struct Mod {
 /// cannot use type Model = Rc<Mod> since that would forbid using impl Model
 pub struct Model;
 
+/// Generic Finite Domain trait
+trait Domain {
+    fn new(min: int, max: int) -> Self;
+    fn set_min(&self, min: int);
+    fn get_min(&self) -> int;
+    fn set_max(&self, max: int);
+    fn get_max(&self) -> int;
+    fn remove(&self, val: int);
+}
+
 /// Representation of finite domains as a list of intervals, maintaining
 /// min and max for easy/quick access
 #[deriving(Clone)]
@@ -34,10 +44,26 @@ struct IntervalDom {
     intervals: Vec<(int, int)>
 }
 
-/// Runtime checked mutability with borrowing
+// Runtime checked mutability with borrowing
 #[deriving(Clone)]
 struct IntervalDomain {
     dom: RefCell<IntervalDom>
+}
+
+
+/// Representation of finite domains as a bit vector, maintaining
+/// min and max for easy/quick access
+#[deriving(Clone)]
+struct BitDom {
+    min: int,
+    max: int,
+    offset: int,
+    bitvector: u64
+}
+
+#[deriving(Clone)]
+struct BitDomain {
+    dom: RefCell<BitDom>
 }
 
 trait Propagator {
@@ -146,7 +172,7 @@ impl Mod {
 }
 
 #[allow(dead_code)]
-impl IntervalDomain {
+impl Domain for IntervalDomain {
     /// IntervalDomain created with initial bounds
     fn new(min: int, max: int) -> IntervalDomain {
         IntervalDomain {
@@ -201,6 +227,7 @@ impl IntervalDomain {
         self.dom.borrow().max
     }
 
+    // TODO test for emptyness
     fn remove(&self, val: int) {
         let mut dom = self.dom.borrow_mut();
         if val > dom.max || val < dom.min { return; }
@@ -274,7 +301,7 @@ impl Var {
             model: model.downgrade(),
             id: id,
             name: name.to_string(),
-            dom: IntervalDomain::new(min, max)
+            dom: Domain::new(min, max)
         });
         model.add_var(v.clone());
         v
@@ -340,6 +367,58 @@ impl FDVar {
 impl fmt::Show for FDVar {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "{} ({})", self.name, self.dom)
+    }
+}
+
+impl Domain for BitDomain {
+    fn new(min: int, max: int) -> BitDomain {
+        assert!(max - min < 64, "cannot be represented as a 64 bit vector");
+        BitDomain {
+            dom: RefCell::new(BitDom {
+                     min: min,
+                     max: max,
+                     offset: min,
+                     bitvector: ! 0_u64 >> ((63 - max + min) as uint)
+                 })
+        }
+    }
+
+    fn set_min(&self, min: int) {
+        let mut dom = self.dom.borrow_mut();
+        if min < dom.min { return; }
+        if min > dom.max { return; } // TODO failure via conditions
+        // FIXME improve
+        dom.min = min;
+        dom.bitvector &= (! 0_u64 >> (dom.min - dom.offset) as uint) << (dom.min - dom.offset) as uint
+    }
+
+    fn get_min(&self) -> int {
+        self.dom.borrow().min
+    }
+
+    fn set_max(&self, max: int) {
+        let mut dom = self.dom.borrow_mut();
+        if max > dom.max { return; }
+        if max < dom.min { return; } // TODO failure via conditions
+        // FIXME improve
+        dom.max = max;
+        dom.bitvector &= ! 0_u64 >> ((63 - max + dom.min) as uint);
+        while ((1 << (dom.max - dom.min) as uint) & dom.bitvector) == 0 {
+            dom.max -= 1;
+        }
+    }
+
+    fn get_max(&self) -> int {
+        self.dom.borrow().max
+    }
+
+    // TODO test for emptyness
+    fn remove(&self, val: int) {
+        let mut dom = self.dom.borrow_mut();
+        if val > dom.max || val < dom.min { return; }
+        if val == dom.max { self.set_max(val - 1); return; }
+        if val == dom.min { self.set_min(val + 1); return; }
+        dom.bitvector ^= 1 << ((val - dom.offset) as uint)
     }
 }
 
