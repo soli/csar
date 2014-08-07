@@ -26,7 +26,7 @@ pub struct Mod {
 pub struct Model;
 
 /// Generic Finite Domain trait
-trait Domain {
+trait Domain : fmt::Show {
     fn new(min: int, max: int) -> Self;
     fn set_min(&self, min: int);
     fn get_min(&self) -> int;
@@ -419,6 +419,13 @@ impl Domain for BitDomain {
         if val == dom.max { self.set_max(val - 1); return; }
         if val == dom.min { self.set_min(val + 1); return; }
         dom.bitvector ^= 1 << ((val - dom.offset) as uint)
+    }
+}
+
+impl fmt::Show for BitDomain {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let dom = self.dom.borrow();
+        return write!(f, "({}, {}) [{:t}]", dom.min, dom.max, dom.bitvector);
     }
 }
 

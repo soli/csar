@@ -173,9 +173,69 @@ fn bitdomain_is_small() {
     let d : BitDomain = Domain::new(-5, 59);
 }
 
+fn setup_bitdomain_simple() -> BitDomain {
+    return Domain::new(-4, 59);
+}
+
+fn assert_bitdomain_has_same_bounds_as_simple(d: BitDomain, min: Option<int>, max: Option<int>) {
+    let s = setup_bitdomain_simple();
+    let test_min = match min {
+        Some(m) => m,
+        _       => s.get_min()
+    };
+    let test_max = match max {
+        Some(m) => m,
+        _       => s.get_max()
+    };
+    assert_eq!((d.get_min(), d.get_max()), (test_min, test_max));
+}
 
 #[test]
 fn bitdomain_is_consistent() {
-    let d : BitDomain = Domain::new(-4, 59);
-    assert_eq!((-4, 59), (d.get_min(), d.get_max()));
+    let d = setup_bitdomain_simple();
+    assert_bitdomain_has_same_bounds_as_simple(d, None, None);
+}
+
+#[test]
+fn bitdomain_set_min_lower() {
+    let d = setup_bitdomain_simple();
+    d.set_min(-8);
+    assert_bitdomain_has_same_bounds_as_simple(d, None, None);
+}
+
+#[test]
+fn bitdomain_set_min_middle() {
+    let d = setup_bitdomain_simple();
+    d.set_min(8);
+    assert_bitdomain_has_same_bounds_as_simple(d, Some(8), None);
+}
+
+#[test]
+// #[should_fail]
+fn bitdomain_set_min_above() {
+    let d = setup_bitdomain_simple();
+    d.set_min(68);
+    assert_bitdomain_has_same_bounds_as_simple(d, None, None);
+}
+
+#[test]
+fn bitdomain_set_max_above() {
+    let d = setup_bitdomain_simple();
+    d.set_max(68);
+    assert_bitdomain_has_same_bounds_as_simple(d, None, None);
+}
+
+#[test]
+fn bitdomain_set_max_middle() {
+    let d = setup_bitdomain_simple();
+    d.set_max(8);
+    assert_bitdomain_has_same_bounds_as_simple(d, None, Some(8));
+}
+
+#[test]
+// #[should_fail]
+fn bitdomain_set_max_below() {
+    let d = setup_bitdomain_simple();
+    d.set_max(-8);
+    assert_bitdomain_has_same_bounds_as_simple(d, None, None);
 }
